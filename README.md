@@ -55,17 +55,18 @@ npm run build      # production
 
 ## Tutoriel rapide pour macOS
 1. Installez [Homebrew](https://brew.sh/) si nécessaire.
-2. Avec le Terminal, installez Python, Node.js et MongoDB :
+2. Ouvrez le Terminal et installez Python, Node.js puis MongoDB :
    ```bash
    brew install python node
    brew tap mongodb/brew
    brew install mongodb-community   # or mongodb-community@<version>
    brew services start mongodb-community
    ```
-3. Exécutez ensuite les commandes d'installation pour le backend puis lancez-le :
+3. Placez-vous dans le dossier du projet `UPC-Tool` puis installez le backend et lancez-le :
    ```bash
-   pip install -r backend/requirements.txt
-   python -m uvicorn backend.server:app --host 0.0.0.0 --port 8001
+   cd /chemin/vers/UPC-Tool
+   pip3 install -r backend/requirements.txt
+   python3 -m uvicorn backend.server:app --host 0.0.0.0 --port 8001
    ```
    Démarrez le frontend dans un autre terminal :
    ```bash
