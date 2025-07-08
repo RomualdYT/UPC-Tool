@@ -188,6 +188,28 @@ async def get_case(case_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/cases/{case_id}/pdf")
+async def get_case_pdf(case_id: str):
+    """Get PDF document for a specific case"""
+    try:
+        case = cases_collection.find_one({"_id": case_id})
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        # Get the first PDF document
+        documents = case.get('documents', [])
+        if not documents:
+            raise HTTPException(status_code=404, detail="No documents found for this case")
+        
+        pdf_doc = documents[0]  # Take the first document
+        return {
+            "pdf_url": pdf_doc.get('url'),
+            "title": pdf_doc.get('title', 'Document'),
+            "language": pdf_doc.get('language', 'EN')
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/filters")
 async def get_filters():
     """Get available filter options"""
