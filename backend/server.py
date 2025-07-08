@@ -133,19 +133,6 @@ async def get_cases(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/cases/{case_id}", response_model=CaseModel)
-async def get_case(case_id: str):
-    """Get a specific case by ID"""
-    try:
-        case = cases_collection.find_one({"_id": case_id})
-        if not case:
-            raise HTTPException(status_code=404, detail="Case not found")
-        
-        case["id"] = case.pop("_id")
-        return case
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/api/cases/count")
 async def get_cases_count(
     search: Optional[str] = Query(None),
@@ -177,6 +164,19 @@ async def get_cases_count(
     try:
         count = cases_collection.count_documents(query)
         return {"count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/cases/{case_id}", response_model=CaseModel)
+async def get_case(case_id: str):
+    """Get a specific case by ID"""
+    try:
+        case = cases_collection.find_one({"_id": case_id})
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        case["id"] = case.pop("_id")
+        return case
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
