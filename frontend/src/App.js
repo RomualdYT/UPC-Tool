@@ -451,7 +451,7 @@ function App() {
                           <span>{t('actions.viewDetails')}</span>
                         </button>
                         
-                        {case_item.documents.length > 0 && (
+                        {(case_item.documents || []).length > 0 && (
                           <button className="btn-outline text-sm py-2 flex items-center justify-center space-x-2">
                             <Download className="h-4 w-4" />
                             <span>{t('actions.download')}</span>
