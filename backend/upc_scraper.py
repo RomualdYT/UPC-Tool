@@ -354,29 +354,62 @@ class UPCScraper:
         return all_decisions
     
     def save_to_mongodb(self, decisions: List[Dict]) -> int:
-        """Save decisions to MongoDB"""
+        """Save decisions to MongoDB with intelligent duplicate handling"""
         if self.collection is None:
             logger.error("MongoDB not configured")
             return 0
         
         saved_count = 0
+        updated_count = 0
+        skipped_count = 0
+        
         for decision in decisions:
             try:
                 # Ensure _id is a string UUID
                 decision['_id'] = decision.pop('id')
                 
-                # Use upsert to avoid duplicates based on reference
-                self.collection.update_one(
-                    {'reference': decision['reference']},
-                    {'$set': decision},
-                    upsert=True
-                )
-                saved_count += 1
+                # Check if decision already exists by reference
+                existing_decision = self.collection.find_one({'reference': decision['reference']})
+                
+                if existing_decision:
+                    # Decision exists, check if we should update
+                    # Only update if the new decision has more data (longer summary, more documents, etc.)
+                    should_update = False
+                    
+                    if len(decision.get('summary', '')) > len(existing_decision.get('summary', '')):
+                        should_update = True
+                    elif len(decision.get('documents', [])) > len(existing_decision.get('documents', [])):
+                        should_update = True
+                    elif len(decision.get('parties', [])) > len(existing_decision.get('parties', [])):
+                        should_update = True
+                    
+                    if should_update:
+                        # Preserve any custom fields that might have been added manually
+                        preserved_fields = ['custom_summary', 'internal_notes', 'admin_comments', 'user_tags']
+                        for field in preserved_fields:
+                            if field in existing_decision:
+                                decision[field] = existing_decision[field]
+                        
+                        self.collection.update_one(
+                            {'reference': decision['reference']},
+                            {'$set': decision}
+                        )
+                        updated_count += 1
+                        logger.debug(f"Updated decision {decision['reference']}")
+                    else:
+                        skipped_count += 1
+                        logger.debug(f"Skipped decision {decision['reference']} (no improvements)")
+                else:
+                    # New decision, insert it
+                    self.collection.insert_one(decision)
+                    saved_count += 1
+                    logger.debug(f"Saved new decision {decision['reference']}")
+                    
             except Exception as e:
                 logger.error(f"Error saving decision {decision.get('reference', 'unknown')}: {e}")
         
-        logger.info(f"Saved {saved_count} decisions to MongoDB")
-        return saved_count
+        logger.info(f"Database update completed: {saved_count} new, {updated_count} updated, {skipped_count} skipped")
+        return saved_count + updated_count
     
     def update_database(self, max_pages: Optional[int] = None) -> int:
         """Update database with latest decisions"""
