@@ -409,6 +409,7 @@ class UPCScraper:
         saved_count = 0
         updated_count = 0
         skipped_count = 0
+        duplicate_count = 0
         
         for decision in decisions:
             try:
@@ -419,6 +420,7 @@ class UPCScraper:
                 existing_decision = self.collection.find_one({'reference': decision['reference']})
                 
                 if existing_decision:
+                    duplicate_count += 1
                     # Decision exists, check if we should update
                     # Only update if the new decision has more data (longer summary, more documents, etc.)
                     should_update = False
@@ -455,7 +457,15 @@ class UPCScraper:
             except Exception as e:
                 logger.error(f"Error saving decision {decision.get('reference', 'unknown')}: {e}")
         
-        logger.info(f"Database update completed: {saved_count} new, {updated_count} updated, {skipped_count} skipped")
+        logger.info(f"Database update completed: {saved_count} new, {updated_count} updated, {skipped_count} skipped, {duplicate_count} duplicates")
+        
+        # Calculate the percentage of new content
+        total_processed = len(decisions)
+        new_content_percentage = (saved_count + updated_count) / total_processed * 100 if total_processed > 0 else 0
+        
+        if new_content_percentage < 10 and total_processed > 10:
+            logger.warning(f"Low new content detected: {new_content_percentage:.1f}% - this may indicate we've reached the end of available data")
+        
         return saved_count + updated_count
     
     def update_database(self, max_pages: Optional[int] = None) -> int:
