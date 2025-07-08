@@ -202,6 +202,20 @@ function App() {
           </p>
         </motion.div>
 
+        {/* UPC Sync Section */}
+        <AnimatePresence>
+          {showSync && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <UPCSync />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Search Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
