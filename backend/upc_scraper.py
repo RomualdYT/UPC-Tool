@@ -324,8 +324,11 @@ class UPCScraper:
         """Scrape all decisions from multiple pages until none are left"""
         all_decisions = []
         page = 1
+        consecutive_empty_pages = 0
+        max_consecutive_empty = 3  # Stop after 3 consecutive empty pages
 
-        while True:
+        while consecutive_empty_pages < max_consecutive_empty:
+            # Only respect max_pages if it's explicitly set (for testing)
             if max_pages is not None and page > max_pages:
                 break
 
@@ -333,15 +336,21 @@ class UPCScraper:
             decisions = self.scrape_decisions_page(page)
 
             if not decisions:
-                logger.info(f"No decisions found on page {page}, stopping...")
-                break
-
-            all_decisions.extend(decisions)
+                consecutive_empty_pages += 1
+                logger.info(f"No decisions found on page {page} (consecutive empty: {consecutive_empty_pages})")
+                if consecutive_empty_pages >= max_consecutive_empty:
+                    logger.info(f"Stopping after {max_consecutive_empty} consecutive empty pages")
+                    break
+            else:
+                consecutive_empty_pages = 0  # Reset counter when we find decisions
+                all_decisions.extend(decisions)
+                logger.info(f"Total decisions collected so far: {len(all_decisions)}")
 
             page += 1
             # Be respectful with requests
             time.sleep(2)
 
+        logger.info(f"Scraping completed. Total decisions found: {len(all_decisions)}")
         return all_decisions
     
     def save_to_mongodb(self, decisions: List[Dict]) -> int:
