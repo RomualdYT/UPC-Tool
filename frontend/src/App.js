@@ -39,6 +39,7 @@ function App() {
     language: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [showSync, setShowSync] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [availableFilters, setAvailableFilters] = useState({
