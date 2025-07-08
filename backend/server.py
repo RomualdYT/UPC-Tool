@@ -133,7 +133,8 @@ async def get_cases(
         cursor = cases_collection.find(query).skip(skip).limit(limit)
         cases = []
         for case in cursor:
-            case["id"] = case.pop("_id")
+            # Convert ObjectId to string for serialization
+            case["id"] = str(case.pop("_id"))
             cases.append(case)
         return cases
     except Exception as e:
