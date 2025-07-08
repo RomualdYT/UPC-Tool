@@ -292,7 +292,7 @@ function App() {
                       className="input-field w-full"
                     >
                       <option value="">All Divisions</option>
-                      {availableFilters.courtDivisions.map(division => (
+                      {(availableFilters.courtDivisions || []).map(division => (
                         <option key={division} value={division}>{division}</option>
                       ))}
                     </select>
