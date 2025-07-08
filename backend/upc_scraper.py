@@ -412,9 +412,10 @@ class UPCScraper:
         return saved_count + updated_count
     
     def update_database(self, max_pages: Optional[int] = None) -> int:
-        """Update database with latest decisions"""
+        """Update database with latest decisions - scrapes all pages if max_pages is None"""
         logger.info("Starting UPC decisions update...")
 
+        # If max_pages is None, scrape all available pages
         decisions = self.scrape_all_decisions(max_pages)
         
         if decisions:
