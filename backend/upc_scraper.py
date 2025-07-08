@@ -37,8 +37,13 @@ class UPCScraper:
     def scrape_decisions_page(self, page: int = 1) -> List[Dict]:
         """Scrape decisions from a specific page"""
         try:
-            # First, let's make a request to get the page
-            response = self.session.get(self.decisions_url, timeout=30)
+            # Build page URL (pagination starts at 0)
+            url = self.decisions_url
+            if page > 1:
+                url = f"{self.decisions_url}?page={page - 1}"
+
+            # Request the page
+            response = self.session.get(url, timeout=30)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -334,7 +339,7 @@ class UPCScraper:
     
     def save_to_mongodb(self, decisions: List[Dict]) -> int:
         """Save decisions to MongoDB"""
-        if not self.collection:
+        if self.collection is None:
             logger.error("MongoDB not configured")
             return 0
         
