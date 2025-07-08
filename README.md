@@ -1,71 +1,83 @@
-# UPC Legal Tool
+# Outil juridique UPC
 
-UPC Legal provides a complete workflow to collect Unified Patent Court (UPC) decisions and orders and expose them through a searchable web interface.
+Ce projet fournit une solution complète pour collecter les décisions et ordonnances de la **Cour unifiée des brevets (UPC)** et les consulter via une interface web simple. Il se compose d'un **backend FastAPI** et d'un **frontend React**.
 
-The project is split into a **FastAPI** backend and a **React** frontend.  Decisions can be scraped from the official UPC website and stored in MongoDB for offline search and analysis.
-
-## Repository structure
-
+## Structure du dépôt
 ```
-backend/         FastAPI application and scraper
-frontend/        React user interface (TailwindCSS)
-backend_test.py  Basic integration tests for the API
+backend/         application FastAPI et module de scraping
+frontend/        interface React (avec TailwindCSS)
+backend_test.py  tests d'intégration de l'API
 ```
 
-## Running the backend
+## Prérequis
+- **Python 3.12** ou plus récent
+- **Node.js 18** ou plus récent
+- **MongoDB** (par défaut sur `mongodb://localhost:27017/`)
 
-1. Install Python requirements:
+## Installation et lancement du backend
+1. Installez les dépendances Python :
    ```bash
    pip install -r backend/requirements.txt
    ```
-2. Ensure MongoDB is available and set `MONGO_URL` if it is not on `mongodb://localhost:27017/`.
-3. Start the API:
+2. Vérifiez que MongoDB est accessible. Modifiez la variable d'environnement `MONGO_URL` si besoin.
+3. Démarrez l'API :
    ```bash
    uvicorn backend.server:app --host 0.0.0.0 --port 8001
    ```
+Au premier lancement, le serveur tente de récupérer quelques décisions depuis le site de l'UPC. Si la récupération échoue, des données exemples sont chargées.
 
-When the server starts for the first time it attempts to synchronise a small number of decisions from the UPC website. Sample data will be used if the sync fails.
+### Variables d'environnement importantes
+- `MONGO_URL` – chaîne de connexion à MongoDB (`mongodb://localhost:27017/` par défaut).
 
-### Important environment variables
+## Installation et lancement du frontend
+Le frontend attend que le backend fonctionne sur `http://localhost:8001` (ou la valeur de `REACT_APP_BACKEND_URL`).
 
-- `MONGO_URL` – connection string to the MongoDB instance (default `mongodb://localhost:27017/`).
-
-## Running the frontend
-
-The frontend is a standard React application.  It expects the backend to be running on `http://localhost:8001` or the value of `REACT_APP_BACKEND_URL`.
-
-```
+```bash
 cd frontend
 npm install
-npm start          # development mode
-npm run build      # create production build
+npm start          # mode développement
+npm run build      # production
 ```
 
-## API overview
+## Tutoriel rapide pour Windows
+1. Installez [Python](https://www.python.org/downloads/windows/) et [Node.js](https://nodejs.org/). Durant l'installation, cochez l'option pour ajouter Python et Node à votre `PATH`.
+2. Installez [MongoDB Community Edition](https://www.mongodb.com/try/download/community) et lancez le service `mongod`.
+3. Ouvrez **PowerShell** et exécutez les commandes d'installation ci‑dessus pour le backend puis pour le frontend.
+4. Ouvrez un navigateur à l'adresse `http://localhost:3000` pour accéder au site.
 
-The main API endpoints exposed by the backend are:
+## Tutoriel rapide pour macOS
+1. Installez [Homebrew](https://brew.sh/) si nécessaire.
+2. Avec le Terminal, installez Python, Node.js et MongoDB :
+   ```bash
+   brew install python node mongodb-community
+   brew services start mongodb-community
+   ```
+3. Exécutez ensuite les commandes d'installation pour le backend puis le frontend comme indiqué plus haut.
+4. Accédez au site via `http://localhost:3000`.
 
-- `GET /api/health` – simple health check.
-- `GET /api/cases` – list cases with optional filtering and pagination.
-- `GET /api/cases/{id}` – retrieve a specific case.
-- `GET /api/cases/count` – count cases matching filters.
-- `GET /api/filters` – retrieve available filter values.
-- `POST /api/sync/upc` – trigger UPC website scraping.
-- `GET /api/sync/status` – database and sync status information.
-- `GET /api/stats` – basic statistics about stored cases.
+## Fonctionnement de l'outil
+- **Backend FastAPI** : expose des points d'API REST permettant de rechercher, filtrer et consulter les décisions stockées dans MongoDB.
+- **Scraper UPC** (`backend/upc_scraper.py`) : récupère les décisions depuis le site officiel de l'UPC, analyse le contenu des pages et enregistre les données structurées dans la base.
+- **Frontend React** : affiche une interface de recherche (filtres, liste de résultats, détails d'une décision) en communiquant avec l'API.
+
+### Principales routes de l'API
+- `GET /api/health` : test simple de disponibilité.
+- `GET /api/cases` : liste paginée des décisions avec filtres.
+- `GET /api/cases/{id}` : détail d'une décision.
+- `GET /api/cases/count` : nombre total de décisions correspondant aux filtres.
+- `GET /api/filters` : valeurs possibles pour les filtres (tribunaux, langues, etc.).
+- `POST /api/sync/upc` : lance le scraping des décisions UPC.
+- `GET /api/sync/status` : informations sur la base et l'état de synchronisation.
+- `GET /api/stats` : statistiques de base sur les décisions enregistrées.
 
 ## Tests
-
-`backend_test.py` contains integration tests for the API.  The backend must be running and connected to MongoDB for the tests to succeed:
-
-```
+`backend_test.py` contient des tests basés sur `unittest`. Le backend doit être démarré et connecté à MongoDB pour que les tests passent :
+```bash
 python backend_test.py
 ```
 
-## Building
+## Compilation du frontend
+Une version compilée se trouve déjà dans `frontend/build`. Vous pouvez la servir via n'importe quel serveur de fichiers statiques ou derrière un proxy avec le backend.
 
-The repository already contains a compiled frontend build in `frontend/build`.  This can be served by any static file server or placed behind a proxy together with the backend.
-
-## License
-
-This repository is provided for demonstration purposes.  No license was supplied with the original code.
+## Licence
+Ce dépôt est fourni à titre démonstratif. Aucune licence spécifique n'a été indiquée par les auteurs initiaux.
