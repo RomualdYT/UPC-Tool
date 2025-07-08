@@ -324,33 +324,66 @@ class UPCScraper:
         """Scrape all decisions from multiple pages until none are left"""
         all_decisions = []
         page = 1
+        consecutive_low_pages = 0  # Count pages with very few decisions
         consecutive_empty_pages = 0
-        max_consecutive_empty = 3  # Stop after 3 consecutive empty pages
+        max_consecutive_empty = 2  # Stop after 2 consecutive empty pages
+        max_consecutive_low = 5    # Stop after 5 consecutive pages with <= 5 decisions
+        min_decisions_per_page = 5  # Minimum expected decisions per page
+        
+        # Safety limit to prevent infinite scraping
+        max_total_pages = 50  # Safety limit
+        
+        logger.info(f"Starting scraping process. Will stop after {max_consecutive_empty} empty pages or {max_consecutive_low} low-content pages")
 
-        while consecutive_empty_pages < max_consecutive_empty:
+        while consecutive_empty_pages < max_consecutive_empty and consecutive_low_pages < max_consecutive_low:
             # Only respect max_pages if it's explicitly set (for testing)
             if max_pages is not None and page > max_pages:
+                logger.info(f"Reached max_pages limit: {max_pages}")
+                break
+                
+            # Safety check to prevent infinite scraping
+            if page > max_total_pages:
+                logger.warning(f"Reached safety limit of {max_total_pages} pages. Stopping scraping.")
                 break
 
             logger.info(f"Scraping page {page}...")
             decisions = self.scrape_decisions_page(page)
+            
+            decisions_count = len(decisions)
 
-            if not decisions:
+            if decisions_count == 0:
                 consecutive_empty_pages += 1
+                consecutive_low_pages = 0  # Reset low count when we get empty page
                 logger.info(f"No decisions found on page {page} (consecutive empty: {consecutive_empty_pages})")
+                
                 if consecutive_empty_pages >= max_consecutive_empty:
                     logger.info(f"Stopping after {max_consecutive_empty} consecutive empty pages")
                     break
-            else:
-                consecutive_empty_pages = 0  # Reset counter when we find decisions
+                    
+            elif decisions_count <= min_decisions_per_page:
+                consecutive_low_pages += 1
+                consecutive_empty_pages = 0  # Reset empty count
+                logger.warning(f"Only {decisions_count} decisions found on page {page} (consecutive low: {consecutive_low_pages})")
+                
+                if consecutive_low_pages >= max_consecutive_low:
+                    logger.info(f"Stopping after {max_consecutive_low} consecutive pages with <= {min_decisions_per_page} decisions")
+                    break
+                    
+                # Still add the decisions but track this as a low-content page
                 all_decisions.extend(decisions)
-                logger.info(f"Total decisions collected so far: {len(all_decisions)}")
+                
+            else:
+                # Good page with many decisions
+                consecutive_empty_pages = 0
+                consecutive_low_pages = 0
+                all_decisions.extend(decisions)
+                logger.info(f"Scraped {decisions_count} decisions from page {page}. Total: {len(all_decisions)}")
 
             page += 1
             # Be respectful with requests
             time.sleep(2)
 
-        logger.info(f"Scraping completed. Total decisions found: {len(all_decisions)}")
+        logger.info(f"Scraping completed. Total decisions found: {len(all_decisions)} across {page-1} pages")
         return all_decisions
     
     def save_to_mongodb(self, decisions: List[Dict]) -> int:
