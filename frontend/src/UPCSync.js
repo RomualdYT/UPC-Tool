@@ -49,14 +49,12 @@ const UPCSync = () => {
     }
   };
 
-  const handleSync = async (maxPages = 5) => {
+  const handleSync = async () => {
     setIsSyncing(true);
     setSyncResult(null);
     
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/sync/upc`, null, {
-        params: { max_pages: maxPages }
-      });
+      const response = await axios.post(`${BACKEND_URL}/api/sync/upc`);
       
       setSyncResult({
         success: true,
