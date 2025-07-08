@@ -353,7 +353,10 @@ class UPCScraper:
         saved_count = 0
         for decision in decisions:
             try:
-                # Use upsert to avoid duplicates
+                # Ensure _id is a string UUID
+                decision['_id'] = decision.pop('id')
+                
+                # Use upsert to avoid duplicates based on reference
                 self.collection.update_one(
                     {'reference': decision['reference']},
                     {'$set': decision},
