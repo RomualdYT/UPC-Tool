@@ -439,9 +439,12 @@ class UPCScraper:
                             if field in existing_decision:
                                 decision[field] = existing_decision[field]
                         
+                        # Remove _id from update data to avoid MongoDB immutable field error
+                        update_data = {k: v for k, v in decision.items() if k != '_id'}
+                        
                         self.collection.update_one(
                             {'reference': decision['reference']},
-                            {'$set': decision}
+                            {'$set': update_data}
                         )
                         updated_count += 1
                         logger.debug(f"Updated decision {decision['reference']}")
