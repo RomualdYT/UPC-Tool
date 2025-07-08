@@ -274,57 +274,72 @@ async def startup_event():
     # Create text index for search
     cases_collection.create_index([("summary", "text"), ("parties", "text"), ("reference", "text")])
     
-    # Insert sample data if collection is empty
-    if cases_collection.count_documents({}) == 0:
-        sample_cases = [
-            {
-                "_id": str(uuid.uuid4()),
-                "date": "2025-01-08",
-                "type": "Order",
-                "reference": "ORD_32533/2025",
-                "registry_number": "App_31860/2025",
-                "court_division": "Milano (IT)",
-                "type_of_action": "Generic application",
-                "language_of_proceedings": "EN",
-                "parties": ["Progress Maschinen & Automation AG", "AWM s.r.l.", "Schnell s.p.a."],
-                "summary": "The Milan Local Division, under Judge Pierluigi Perrotti, issued an order in the case between claimant Progress Maschinen & Automation AG and defendants AWM s.r.l. and Schnell s.p.a. regarding patent infringement and counterclaim for patent revocation.",
-                "legal_norms": ["Art. 32 UPCA", "Rule 13 RoP"],
-                "tags": ["patent infringement", "counterclaim", "revocation"],
-                "documents": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "title": "Download Order (EN)",
-                        "url": "/api/documents/sample_order_en.pdf",
-                        "language": "EN",
-                        "case_id": ""
-                    }
-                ]
-            },
-            {
-                "_id": str(uuid.uuid4()),
-                "date": "2025-01-03",
-                "type": "Order",
-                "reference": "ORD_29288/2025",
-                "registry_number": "App_28457/2025",
-                "court_division": "München (DE)",
-                "type_of_action": "Generic application",
-                "language_of_proceedings": "DE",
-                "parties": ["Renault Deutschland AG", "Renault Retail Group Deutschland GmbH"],
-                "summary": "The President of the Court of First Instance in Munich issued an order concerning an application by Renault entities to change the language of proceedings from German to English.",
-                "legal_norms": ["Art. 49 UPCA", "Rule 321 RoP"],
-                "tags": ["language change", "procedural order"],
-                "documents": [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "title": "Download Order (EN)",
-                        "url": "/api/documents/sample_order_de.pdf",
-                        "language": "EN",
-                        "case_id": ""
-                    }
-                ]
-            }
-        ]
-        cases_collection.insert_many(sample_cases)
+    # Check if we have any cases in the database
+    case_count = cases_collection.count_documents({})
+    
+    if case_count == 0:
+        print("No cases found in database. Starting UPC sync...")
+        try:
+            # Try to sync with UPC website
+            count = scraper.update_database(max_pages=2)
+            print(f"Initial sync completed: {count} decisions loaded")
+        except Exception as e:
+            print(f"UPC sync failed, loading sample data: {e}")
+            # Fallback to sample data if sync fails
+            sample_cases = [
+                {
+                    "_id": str(uuid.uuid4()),
+                    "date": "2025-01-08",
+                    "type": "Order",
+                    "reference": "ORD_32533/2025",
+                    "registry_number": "App_31860/2025",
+                    "court_division": "Milano (IT)",
+                    "type_of_action": "Generic application",
+                    "language_of_proceedings": "EN",
+                    "parties": ["Progress Maschinen & Automation AG", "AWM s.r.l.", "Schnell s.p.a."],
+                    "summary": "The Milan Local Division, under Judge Pierluigi Perrotti, issued an order in the case between claimant Progress Maschinen & Automation AG and defendants AWM s.r.l. and Schnell s.p.a. regarding patent infringement and counterclaim for patent revocation.",
+                    "legal_norms": ["Art. 32 UPCA", "Rule 13 RoP"],
+                    "tags": ["patent infringement", "counterclaim", "revocation"],
+                    "documents": [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "title": "Download Order (EN)",
+                            "url": "/api/documents/sample_order_en.pdf",
+                            "language": "EN",
+                            "case_id": ""
+                        }
+                    ]
+                },
+                {
+                    "_id": str(uuid.uuid4()),
+                    "date": "2025-01-03",
+                    "type": "Order",
+                    "reference": "ORD_29288/2025",
+                    "registry_number": "App_28457/2025",
+                    "court_division": "München (DE)",
+                    "type_of_action": "Generic application",
+                    "language_of_proceedings": "DE",
+                    "parties": ["Renault Deutschland AG", "Renault Retail Group Deutschland GmbH"],
+                    "summary": "The President of the Court of First Instance in Munich issued an order concerning an application by Renault entities to change the language of proceedings from German to English.",
+                    "legal_norms": ["Art. 49 UPCA", "Rule 321 RoP"],
+                    "tags": ["language change", "procedural order"],
+                    "documents": [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "title": "Download Order (EN)",
+                            "url": "/api/documents/sample_order_de.pdf",
+                            "language": "EN",
+                            "case_id": ""
+                        }
+                    ]
+                }
+            ]
+            cases_collection.insert_many(sample_cases)
+            print("Sample data loaded as fallback")
+    else:
+        print(f"Database already contains {case_count} cases")
+        # Optional: sync in background every startup
+        # asyncio.create_task(sync_upc_decisions(max_pages=1))
 
 if __name__ == "__main__":
     import uvicorn
