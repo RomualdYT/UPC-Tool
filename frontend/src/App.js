@@ -308,7 +308,7 @@ function App() {
                       className="input-field w-full"
                     >
                       <option value="">All Languages</option>
-                      {availableFilters.languages.map(lang => (
+                      {(availableFilters.languages || []).map(lang => (
                         <option key={lang} value={lang}>{t(`languages.${lang.toLowerCase()}`)}</option>
                       ))}
                     </select>
