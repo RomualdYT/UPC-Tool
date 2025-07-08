@@ -19,6 +19,9 @@ db = client['upc_legal']
 cases_collection = db['cases']
 documents_collection = db['documents']
 
+# Initialize UPC scraper
+scraper = UPCScraper(MONGO_URL)
+
 app = FastAPI(title="UPC Legal API", version="1.0.0")
 
 # CORS middleware
