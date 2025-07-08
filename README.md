@@ -49,7 +49,9 @@ npm run build      # production
 1. Installez [Homebrew](https://brew.sh/) si nécessaire.
 2. Avec le Terminal, installez Python, Node.js et MongoDB :
    ```bash
-   brew install python node mongodb-community
+   brew install python node
+   brew tap mongodb/brew
+   brew install mongodb-community   # or mongodb-community@<version>
    brew services start mongodb-community
    ```
 3. Exécutez ensuite les commandes d'installation pour le backend puis le frontend comme indiqué plus haut.
