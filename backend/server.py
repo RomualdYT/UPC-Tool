@@ -213,7 +213,8 @@ async def create_case(case: CaseModel):
         case_dict = case.dict()
         case_dict["_id"] = case_dict.pop("id")
         result = cases_collection.insert_one(case_dict)
-        case_dict["id"] = case_dict.pop("_id")
+        # Convert ObjectId to string for response
+        case_dict["id"] = str(case_dict.pop("_id"))
         return case_dict
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
