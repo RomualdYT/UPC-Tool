@@ -220,11 +220,11 @@ async def create_case(case: CaseModel):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sync/upc")
-async def sync_upc_data(background_tasks: BackgroundTasks, max_pages: Optional[int] = None):
-    """Sync data with UPC website"""
+async def sync_upc_data(background_tasks: BackgroundTasks):
+    """Sync data with UPC website - scrapes all available pages"""
     try:
-        background_tasks.add_task(sync_upc_decisions, max_pages)
-        return {"message": "UPC data sync started", "max_pages": max_pages}
+        background_tasks.add_task(sync_upc_decisions)
+        return {"message": "UPC data sync started - will scrape all available pages"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -245,11 +245,11 @@ async def get_sync_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-async def sync_upc_decisions(max_pages: Optional[int] = None):
-    """Background task to sync UPC decisions"""
+async def sync_upc_decisions():
+    """Background task to sync UPC decisions - scrapes all pages"""
     try:
-        count = scraper.update_database(max_pages)
-        print(f"UPC sync completed: {count} decisions updated")
+        count = scraper.update_database()  # No max_pages parameter
+        print(f"UPC sync completed: {count} decisions processed")
     except Exception as e:
         print(f"UPC sync failed: {e}")
 
