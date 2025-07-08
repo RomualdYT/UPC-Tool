@@ -160,6 +160,14 @@ function App() {
             
             {/* Language Selector */}
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowSync(!showSync)}
+                className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
+                title="UPC Data Sync"
+              >
+                <Database className="h-5 w-5 text-white" />
+              </button>
+              
               <div className="relative">
                 <select
                   value={i18n.language}
