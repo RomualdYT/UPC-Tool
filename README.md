@@ -42,7 +42,14 @@ npm run build      # production
 ## Tutoriel rapide pour Windows
 1. Installez [Python](https://www.python.org/downloads/windows/) et [Node.js](https://nodejs.org/). Durant l'installation, cochez l'option pour ajouter Python et Node à votre `PATH`.
 2. Installez [MongoDB Community Edition](https://www.mongodb.com/try/download/community) et lancez le service `mongod`.
-3. Ouvrez **PowerShell** et exécutez les commandes d'installation ci‑dessus pour le backend puis pour le frontend.
+3. Ouvrez **PowerShell** et exécutez les commandes d'installation ci‑dessus, puis lancez le backend :
+   ```bash
+   uvicorn backend.server:app --host 0.0.0.0 --port 8001
+   ```
+   Dans un autre terminal, démarrez le frontend depuis le dossier `frontend` :
+   ```bash
+   npm start
+   ```
 4. Ouvrez un navigateur à l'adresse `http://localhost:3000` pour accéder au site.
 
 ## Tutoriel rapide pour macOS
@@ -54,7 +61,14 @@ npm run build      # production
    brew install mongodb-community   # or mongodb-community@<version>
    brew services start mongodb-community
    ```
-3. Exécutez ensuite les commandes d'installation pour le backend puis le frontend comme indiqué plus haut.
+3. Exécutez ensuite les commandes d'installation pour le backend puis lancez-le :
+   ```bash
+   uvicorn backend.server:app --host 0.0.0.0 --port 8001
+   ```
+   Démarrez le frontend dans un autre terminal :
+   ```bash
+   npm start
+   ```
 4. Accédez au site via `http://localhost:3000`.
 
 ## Fonctionnement de l'outil
