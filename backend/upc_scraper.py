@@ -60,16 +60,30 @@ class UPCScraper:
                 decision_elements = soup.find_all(['div', 'article', 'section'],
                                                 attrs={'class': re.compile(r'result|item|entry', re.I)})
             
+            # Keep track of unique references to avoid duplicates within the same page
+            seen_references = set()
+            
             for element in decision_elements:
                 try:
                     decision_data = self._extract_decision_data(element)
-                    if decision_data:
-                        decisions.append(decision_data)
+                    if decision_data and decision_data.get('reference'):
+                        # Check if we've already seen this reference on this page
+                        ref = decision_data['reference']
+                        if ref not in seen_references:
+                            seen_references.add(ref)
+                            decisions.append(decision_data)
+                        else:
+                            logger.debug(f"Skipping duplicate reference {ref} on page {page}")
                 except Exception as e:
                     logger.warning(f"Error parsing decision element: {e}")
                     continue
             
-            logger.info(f"Scraped {len(decisions)} decisions from page {page}")
+            # Additional validation: if we get very few unique decisions, it might be end of content
+            if len(decisions) > 0:
+                logger.info(f"Scraped {len(decisions)} unique decisions from page {page}")
+            else:
+                logger.info(f"No valid decisions found on page {page}")
+                
             return decisions
             
         except Exception as e:
