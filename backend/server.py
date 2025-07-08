@@ -10,7 +10,7 @@ import uuid
 from enum import Enum
 import asyncio
 import threading
-from upc_scraper import UPCScraper
+from .upc_scraper import UPCScraper
 
 # MongoDB connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
