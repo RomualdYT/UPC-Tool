@@ -216,6 +216,58 @@ async def create_case(case: CaseModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sync/upc")
+async def sync_upc_data(background_tasks: BackgroundTasks, max_pages: int = 5):
+    """Sync data with UPC website"""
+    try:
+        background_tasks.add_task(sync_upc_decisions, max_pages)
+        return {"message": "UPC data sync started", "max_pages": max_pages}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/sync/status")
+async def get_sync_status():
+    """Get sync status information"""
+    try:
+        total_cases = cases_collection.count_documents({})
+        last_sync = cases_collection.find_one(
+            sort=[("_id", -1)]
+        )
+        
+        return {
+            "total_cases": total_cases,
+            "last_sync": last_sync.get("date") if last_sync else None,
+            "database_status": "connected"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def sync_upc_decisions(max_pages: int = 5):
+    """Background task to sync UPC decisions"""
+    try:
+        count = scraper.update_database(max_pages)
+        print(f"UPC sync completed: {count} decisions updated")
+    except Exception as e:
+        print(f"UPC sync failed: {e}")
+
+@app.get("/api/stats")
+async def get_statistics():
+    """Get database statistics"""
+    try:
+        from datetime import timedelta
+        stats = {
+            "total_cases": cases_collection.count_documents({}),
+            "case_types": list(cases_collection.distinct("type")),
+            "court_divisions": list(cases_collection.distinct("court_division")),
+            "languages": list(cases_collection.distinct("language_of_proceedings")),
+            "recent_cases": cases_collection.count_documents({
+                "date": {"$gte": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")}
+            })
+        }
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Initialize sample data
 @app.on_event("startup")
 async def startup_event():
