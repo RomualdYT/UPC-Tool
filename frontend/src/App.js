@@ -276,7 +276,7 @@ function App() {
                       className="input-field w-full"
                     >
                       <option value="">All Types</option>
-                      {availableFilters.caseTypes.map(type => (
+                      {(availableFilters.caseTypes || []).map(type => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
