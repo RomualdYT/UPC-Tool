@@ -16,10 +16,13 @@ import {
   Building2,
   Users,
   Tag,
-  ExternalLink
+  ExternalLink,
+  Settings,
+  Database
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
+import UPCSync from './UPCSync';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
