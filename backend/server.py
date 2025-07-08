@@ -182,7 +182,8 @@ async def get_case(case_id: str):
         if not case:
             raise HTTPException(status_code=404, detail="Case not found")
         
-        case["id"] = case.pop("_id")
+        # Convert ObjectId to string for serialization
+        case["id"] = str(case.pop("_id"))
         return case
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
