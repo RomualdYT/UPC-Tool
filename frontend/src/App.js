@@ -409,7 +409,7 @@ function App() {
                       </p>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {case_item.parties.map((party, idx) => (
+                        {(case_item.parties || []).map((party, idx) => (
                           <span key={idx} className="legal-badge-gray flex items-center space-x-1">
                             <Users className="h-3 w-3" />
                             <span>{party}</span>
@@ -417,9 +417,9 @@ function App() {
                         ))}
                       </div>
                       
-                      {case_item.tags.length > 0 && (
+                      {(case_item.tags || []).length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {case_item.tags.map((tag, idx) => (
+                          {(case_item.tags || []).map((tag, idx) => (
                             <span key={idx} className="legal-badge-success flex items-center space-x-1">
                               <Tag className="h-3 w-3" />
                               <span>{tag}</span>
