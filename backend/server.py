@@ -217,7 +217,7 @@ async def create_case(case: CaseModel):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sync/upc")
-async def sync_upc_data(background_tasks: BackgroundTasks, max_pages: int = 5):
+async def sync_upc_data(background_tasks: BackgroundTasks, max_pages: Optional[int] = None):
     """Sync data with UPC website"""
     try:
         background_tasks.add_task(sync_upc_decisions, max_pages)
@@ -242,7 +242,7 @@ async def get_sync_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-async def sync_upc_decisions(max_pages: int = 5):
+async def sync_upc_decisions(max_pages: Optional[int] = None):
     """Background task to sync UPC decisions"""
     try:
         count = scraper.update_database(max_pages)

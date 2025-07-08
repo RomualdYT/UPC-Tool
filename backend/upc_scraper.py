@@ -37,20 +37,27 @@ class UPCScraper:
     def scrape_decisions_page(self, page: int = 1) -> List[Dict]:
         """Scrape decisions from a specific page"""
         try:
-            # First, let's make a request to get the page
-            response = self.session.get(self.decisions_url, timeout=30)
+            # Build page URL (pagination starts at 0)
+            url = self.decisions_url
+            if page > 1:
+                url = f"{self.decisions_url}?page={page - 1}"
+
+            # Request the page
+            response = self.session.get(url, timeout=30)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.content, 'html.parser')
             decisions = []
-            
-            # Look for decision cards or rows
-            # This is a generic approach - we'll need to adjust based on actual HTML structure
-            decision_elements = soup.find_all(['div', 'tr'], class_=re.compile(r'decision|case|order', re.I))
-            
+
+            # The decisions are listed in a table with 50 rows per page
+            decision_elements = soup.select('table.views-table tbody tr')
+
             if not decision_elements:
-                # Try alternative selectors
-                decision_elements = soup.find_all(['div', 'article', 'section'], 
+                # Fallback to previous generic selectors
+                decision_elements = soup.find_all(['div', 'tr'], class_=re.compile(r'decision|case|order', re.I))
+
+            if not decision_elements:
+                decision_elements = soup.find_all(['div', 'article', 'section'],
                                                 attrs={'class': re.compile(r'result|item|entry', re.I)})
             
             for element in decision_elements:
@@ -313,28 +320,33 @@ class UPCScraper:
         
         return documents
     
-    def scrape_all_decisions(self, max_pages: int = 10) -> List[Dict]:
-        """Scrape all decisions from multiple pages"""
+    def scrape_all_decisions(self, max_pages: Optional[int] = None) -> List[Dict]:
+        """Scrape all decisions from multiple pages until none are left"""
         all_decisions = []
-        
-        for page in range(1, max_pages + 1):
+        page = 1
+
+        while True:
+            if max_pages is not None and page > max_pages:
+                break
+
             logger.info(f"Scraping page {page}...")
             decisions = self.scrape_decisions_page(page)
-            
+
             if not decisions:
                 logger.info(f"No decisions found on page {page}, stopping...")
                 break
-            
+
             all_decisions.extend(decisions)
-            
+
+            page += 1
             # Be respectful with requests
             time.sleep(2)
-        
+
         return all_decisions
     
     def save_to_mongodb(self, decisions: List[Dict]) -> int:
         """Save decisions to MongoDB"""
-        if not self.collection:
+        if self.collection is None:
             logger.error("MongoDB not configured")
             return 0
         
@@ -354,10 +366,10 @@ class UPCScraper:
         logger.info(f"Saved {saved_count} decisions to MongoDB")
         return saved_count
     
-    def update_database(self, max_pages: int = 5) -> int:
+    def update_database(self, max_pages: Optional[int] = None) -> int:
         """Update database with latest decisions"""
         logger.info("Starting UPC decisions update...")
-        
+
         decisions = self.scrape_all_decisions(max_pages)
         
         if decisions:
@@ -380,5 +392,4 @@ def main():
     for decision in decisions[:3]:  # Show first 3
         print(json.dumps(decision, indent=2))
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":    main()
