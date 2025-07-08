@@ -164,35 +164,19 @@ const UPCSync = () => {
             <div>
               <p className="text-sm font-medium text-legal-900">Sync with UPC Website</p>
               <p className="text-xs text-legal-600">
-                Fetch latest decisions from unified-patent-court.org
+                Fetch all latest decisions from unified-patent-court.org
               </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <select
-              className="input-field text-sm"
-              defaultValue="5"
-              id="maxPages"
-            >
-              <option value="1">1 Page</option>
-              <option value="5">5 Pages</option>
-              <option value="10">10 Pages</option>
-              <option value="20">20 Pages</option>
-            </select>
-            
-            <button
-              onClick={() => {
-                const maxPages = parseInt(document.getElementById('maxPages').value);
-                handleSync(maxPages);
-              }}
-              disabled={issyncing}
-              className="btn-primary flex items-center space-x-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${issyncing ? 'animate-spin' : ''}`} />
-              <span>{issyncing ? 'Syncing...' : 'Sync Now'}</span>
-            </button>
-          </div>
+          <button
+            onClick={handleSync}
+            disabled={issyncing}
+            className="romulus-btn-primary flex items-center space-x-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${issyncing ? 'animate-spin' : ''}`} />
+            <span>{issyncing ? 'Syncing all pages...' : 'Sync All Data'}</span>
+          </button>
         </div>
       </div>
 
