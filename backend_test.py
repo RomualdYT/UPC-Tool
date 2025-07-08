@@ -2,13 +2,17 @@ import requests
 import unittest
 import json
 from datetime import datetime
+import time
 
 class UPCLegalAPITester(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(UPCLegalAPITester, self).__init__(*args, **kwargs)
+        # Use the correct backend URL from frontend/.env
         self.base_url = "http://localhost:8001"
         self.api_url = f"{self.base_url}/api"
         self.session = requests.Session()
+        # Set a timeout for all requests to detect unresponsive endpoints
+        self.timeout = 5  # 5 seconds timeout
 
     def test_01_health_check(self):
         """Test the health check endpoint"""
