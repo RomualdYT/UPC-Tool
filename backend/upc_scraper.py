@@ -118,9 +118,40 @@ class UPCScraper:
             
             # Extract registry number and order reference
             registry_text = registry_cell.get_text(strip=True)
-            registry_lines = registry_text.split('\n')
-            registry_number = registry_lines[0].strip() if registry_lines else ""
-            order_reference = registry_lines[1].strip() if len(registry_lines) > 1 else ""
+            # Remove "Full Details" text if present
+            registry_text = registry_text.replace('Full Details', '').strip()
+            
+            # Split by newlines first, then try to parse each line
+            registry_lines = [line.strip() for line in registry_text.split('\n') if line.strip()]
+            
+            registry_number = ""
+            order_reference = ""
+            
+            # Parse registry and order references
+            for line in registry_lines:
+                # Look for App_ pattern for registry number
+                app_match = re.search(r'(App_\d+/\d+)', line)
+                if app_match:
+                    registry_number = app_match.group(1)
+                
+                # Look for ORD_ or DEC_ pattern for order reference
+                ord_match = re.search(r'((?:ORD|DEC)_\d+/\d+)', line)
+                if ord_match:
+                    order_reference = ord_match.group(1)
+                
+                # Handle other patterns
+                if not registry_number:
+                    cc_match = re.search(r'(CC_\d+/\d+)', line)
+                    if cc_match:
+                        registry_number = cc_match.group(1)
+                
+                act_match = re.search(r'(ACT_\d+/\d+)', line)
+                if act_match:
+                    registry_number = act_match.group(1)
+                
+                apl_match = re.search(r'(APL_\d+/\d+)', line)
+                if apl_match:
+                    registry_number = apl_match.group(1)
             
             # Extract court division
             court_division = court_cell.get_text(strip=True)
