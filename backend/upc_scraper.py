@@ -416,26 +416,190 @@ class UPCScraper:
             soup = BeautifulSoup(response.content, 'html.parser')
             detailed_info = {}
             
-            # Extract court division from detail page
+            # Extract all text for pattern matching
+            page_text = soup.get_text()
+            
+            # Extract Language of Proceedings
+            language_of_proceedings = self._extract_language_from_detail(page_text)
+            if language_of_proceedings:
+                detailed_info['language_of_proceedings'] = language_of_proceedings
+            
+            # Extract Keywords
+            keywords = self._extract_keywords_from_detail(page_text)
+            if keywords:
+                detailed_info['keywords'] = keywords
+            
+            # Extract Headnotes
+            headnotes = self._extract_headnotes_from_detail(page_text)
+            if headnotes:
+                detailed_info['headnotes'] = headnotes
+            
+            # Extract enhanced court division
             court_division = self._extract_court_division_from_detail(soup)
             if court_division:
                 detailed_info['court_division'] = court_division
             
-            # Extract parties from detail page
+            # Extract enhanced parties information
             parties = self._extract_parties_from_detail(soup)
             if parties:
                 detailed_info['parties'] = parties
             
-            # Extract summary from detail page
+            # Extract enhanced summary
             summary = self._extract_summary_from_detail(soup)
             if summary:
                 detailed_info['summary'] = summary
+            
+            # Extract legal norms
+            legal_norms = self._extract_legal_norms_from_detail(page_text)
+            if legal_norms:
+                detailed_info['legal_norms'] = legal_norms
+            
+            # Extract tags based on content
+            tags = self._extract_tags_from_detail(page_text)
+            if tags:
+                detailed_info['tags'] = tags
             
             return detailed_info
             
         except Exception as e:
             logger.warning(f"Error scraping detail page {url}: {e}")
             return {}
+    
+    def _extract_language_from_detail(self, text: str) -> Optional[str]:
+        """Extract Language of Proceedings from detail page"""
+        try:
+            # Look for language patterns
+            patterns = [
+                r'Language of Proceedings[:\s]*([A-Za-z]+)',
+                r'Language[:\s]*([A-Za-z]+)',
+                r'Proceedings Language[:\s]*([A-Za-z]+)',
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, text, re.I)
+                if match:
+                    language = match.group(1).strip().lower()
+                    # Map to standard codes
+                    language_map = {
+                        'english': 'EN',
+                        'german': 'DE',
+                        'french': 'FR',
+                        'italian': 'IT',
+                        'dutch': 'NL',
+                        'danish': 'DA',
+                        'finnish': 'FI',
+                        'portuguese': 'PT',
+                        'slovenian': 'SI',
+                        'swedish': 'SV'
+                    }
+                    return language_map.get(language, language.upper()[:2])
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Error extracting language: {e}")
+            return None
+    
+    def _extract_keywords_from_detail(self, text: str) -> List[str]:
+        """Extract Keywords from detail page"""
+        try:
+            keywords = []
+            
+            # Look for keywords section
+            patterns = [
+                r'Keywords?[:\s]*([^\n]+)',
+                r'Key words?[:\s]*([^\n]+)',
+                r'Tags?[:\s]*([^\n]+)',
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, text, re.I)
+                if match:
+                    keywords_text = match.group(1).strip()
+                    # Split on common separators
+                    keywords = [kw.strip() for kw in re.split(r'[,;]', keywords_text) if kw.strip()]
+                    break
+            
+            return keywords
+            
+        except Exception as e:
+            logger.debug(f"Error extracting keywords: {e}")
+            return []
+    
+    def _extract_headnotes_from_detail(self, text: str) -> str:
+        """Extract Headnotes from detail page"""
+        try:
+            # Look for headnotes section
+            patterns = [
+                r'Headnotes?[:\s]*([^\n]+(?:\n[^\n]+)*)',
+                r'Head notes?[:\s]*([^\n]+(?:\n[^\n]+)*)',
+                r'Summary[:\s]*([^\n]+(?:\n[^\n]+)*)',
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, text, re.I)
+                if match:
+                    headnotes = match.group(1).strip()
+                    # Clean up and limit length
+                    headnotes = re.sub(r'\s+', ' ', headnotes)
+                    return headnotes[:1000]  # Limit to 1000 characters
+            
+            return ""
+            
+        except Exception as e:
+            logger.debug(f"Error extracting headnotes: {e}")
+            return ""
+    
+    def _extract_legal_norms_from_detail(self, text: str) -> List[str]:
+        """Extract legal norms from detail page"""
+        try:
+            norms = []
+            patterns = [
+                r'(Art\.\s*\d+[a-zA-Z]*(?:\s*\([^)]+\))?(?:\s*[A-Z]+)?)',
+                r'(Article\s*\d+[a-zA-Z]*(?:\s*\([^)]+\))?(?:\s*[A-Z]+)?)',
+                r'(Rule\s*\d+[a-zA-Z]*(?:\s*\([^)]+\))?(?:\s*[A-Z]+)?)',
+                r'(Section\s*\d+[a-zA-Z]*(?:\s*\([^)]+\))?(?:\s*[A-Z]+)?)',
+            ]
+            
+            for pattern in patterns:
+                matches = re.findall(pattern, text, re.I)
+                norms.extend(matches)
+            
+            # Remove duplicates and clean up
+            unique_norms = []
+            for norm in norms:
+                clean_norm = norm.strip()
+                if clean_norm and clean_norm not in unique_norms:
+                    unique_norms.append(clean_norm)
+            
+            return unique_norms[:10]  # Limit to 10 norms
+            
+        except Exception as e:
+            logger.debug(f"Error extracting legal norms: {e}")
+            return []
+    
+    def _extract_tags_from_detail(self, text: str) -> List[str]:
+        """Extract relevant tags from detail page content"""
+        try:
+            tags = []
+            tag_keywords = [
+                'patent infringement', 'preliminary injunction', 'revocation',
+                'counterclaim', 'language change', 'procedural order',
+                'costs', 'damages', 'validity', 'enforcement',
+                'appeal', 'application', 'generic application',
+                'provisional measures', 'default judgment'
+            ]
+            
+            text_lower = text.lower()
+            for keyword in tag_keywords:
+                if keyword in text_lower:
+                    tags.append(keyword)
+            
+            return tags
+            
+        except Exception as e:
+            logger.debug(f"Error extracting tags: {e}")
+            return []
     
     def _extract_court_division_from_detail(self, soup) -> Optional[str]:
         """Extract court division from detail page"""
