@@ -789,25 +789,42 @@ class UPCScraper:
                 # Ensure _id is a string UUID
                 decision['_id'] = decision.pop('id')
                 
-                # Check if decision already exists by reference
-                existing_decision = self.collection.find_one({'reference': decision['reference']})
+                # Use registry_number as the primary unique identifier
+                unique_key = decision.get('registry_number') or decision.get('order_reference')
+                if not unique_key:
+                    logger.warning("Decision has no registry number or order reference, skipping")
+                    continue
+                
+                # Check if decision already exists by registry number or order reference
+                existing_decision = self.collection.find_one({
+                    '$or': [
+                        {'registry_number': decision.get('registry_number')},
+                        {'order_reference': decision.get('order_reference')}
+                    ]
+                })
                 
                 if existing_decision:
                     duplicate_count += 1
                     # Decision exists, check if we should update
-                    # Only update if the new decision has more data (longer summary, more documents, etc.)
                     should_update = False
                     
+                    # Update if we have more complete data
                     if len(decision.get('summary', '')) > len(existing_decision.get('summary', '')):
                         should_update = True
                     elif len(decision.get('documents', [])) > len(existing_decision.get('documents', [])):
                         should_update = True
                     elif len(decision.get('parties', [])) > len(existing_decision.get('parties', [])):
                         should_update = True
+                    elif decision.get('language_of_proceedings') and not existing_decision.get('language_of_proceedings'):
+                        should_update = True
+                    elif decision.get('keywords') and not existing_decision.get('keywords'):
+                        should_update = True
+                    elif decision.get('headnotes') and not existing_decision.get('headnotes'):
+                        should_update = True
                     
                     if should_update:
                         # Preserve any custom fields that might have been added manually
-                        preserved_fields = ['custom_summary', 'internal_notes', 'admin_comments', 'user_tags']
+                        preserved_fields = ['custom_summary', 'internal_notes', 'admin_comments', 'user_tags', 'admin_summary', 'apports']
                         for field in preserved_fields:
                             if field in existing_decision:
                                 decision[field] = existing_decision[field]
@@ -816,22 +833,22 @@ class UPCScraper:
                         update_data = {k: v for k, v in decision.items() if k != '_id'}
                         
                         self.collection.update_one(
-                            {'reference': decision['reference']},
+                            {'_id': existing_decision['_id']},
                             {'$set': update_data}
                         )
                         updated_count += 1
-                        logger.debug(f"Updated decision {decision['reference']}")
+                        logger.debug(f"Updated decision {unique_key}")
                     else:
                         skipped_count += 1
-                        logger.debug(f"Skipped decision {decision['reference']} (no improvements)")
+                        logger.debug(f"Skipped decision {unique_key} (no improvements)")
                 else:
                     # New decision, insert it
                     self.collection.insert_one(decision)
                     saved_count += 1
-                    logger.debug(f"Saved new decision {decision['reference']}")
+                    logger.debug(f"Saved new decision {unique_key}")
                     
             except Exception as e:
-                logger.error(f"Error saving decision {decision.get('reference', 'unknown')}: {e}")
+                logger.error(f"Error saving decision {decision.get('registry_number', 'unknown')}: {e}")
         
         logger.info(f"Database update completed: {saved_count} new, {updated_count} updated, {skipped_count} skipped, {duplicate_count} duplicates")
         
