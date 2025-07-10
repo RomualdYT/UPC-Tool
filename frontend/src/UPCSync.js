@@ -12,24 +12,30 @@ import {
   Info
 } from 'lucide-react';
 import axios from 'axios';
+import { useData } from './contexts/DataContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
-const UPCSync = () => {
+const UPCSync = ({ onSync, syncing: externalSyncing }) => {
   const { t } = useTranslation();
+  const { allCases, stats, fetchAllCases } = useData();
+  
   const [syncStatus, setSyncStatus] = useState({
     total_cases: 0,
     last_sync: null,
     database_status: 'disconnected'
   });
-  const [issyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
-  const [stats, setStats] = useState(null);
+  const [backendStats, setBackendStats] = useState(null);
 
   useEffect(() => {
     fetchSyncStatus();
-    fetchStats();
+    fetchBackendStats();
   }, []);
+
+  // Utiliser les données du contexte quand elles sont disponibles
+  const displayStats = stats || backendStats;
+  const totalCases = allCases.length || syncStatus.total_cases;
 
   const fetchSyncStatus = async () => {
     try {
@@ -40,31 +46,38 @@ const UPCSync = () => {
     }
   };
 
-  const fetchStats = async () => {
+  const fetchBackendStats = async () => {
     try {
       const response = await axios.get(`${BACKEND_URL}/api/stats`);
-      setStats(response.data);
+      setBackendStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
   };
 
   const handleSync = async () => {
-    setIsSyncing(true);
     setSyncResult(null);
     
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/sync/upc`);
+      if (onSync) {
+        const result = await onSync();
+        if (result.success) {
+          setSyncResult({
+            success: true,
+            message: result.message || 'Synchronisation UPC démarrée'
+          });
+        } else {
+          setSyncResult({
+            success: false,
+            message: result.error || 'Erreur de synchronisation'
+          });
+        }
+      }
       
-      setSyncResult({
-        success: true,
-        message: response.data.message
-      });
-      
-      // Wait a bit then refresh status
+      // Refresh status after sync
       setTimeout(() => {
         fetchSyncStatus();
-        fetchStats();
+        fetchBackendStats();
       }, 3000);
       
     } catch (error) {
@@ -72,8 +85,6 @@ const UPCSync = () => {
         success: false,
         message: error.response?.data?.detail || 'Sync failed'
       });
-    } finally {
-      setIsSyncing(false);
     }
   };
 
