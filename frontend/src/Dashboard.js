@@ -6,18 +6,16 @@ import {
   Building2, 
   FileText, 
   Globe,
-  ArrowRight,
   Download,
   Filter,
   Search,
   Gavel
 } from 'lucide-react';
-import axios from 'axios';
 import { format } from 'date-fns';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
-const Dashboard = ({ onNavigateToData }) => {
+
+const Dashboard = ({ cases = [], loading = false }) => {
   const [stats, setStats] = useState({
     totalCases: 0,
     casesByType: {},
@@ -26,28 +24,13 @@ const Dashboard = ({ onNavigateToData }) => {
     casesByMonth: {},
     recentCases: []
   });
-  const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('all');
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, [selectedPeriod]);
-
-  const fetchDashboardStats = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${BACKEND_URL}/api/cases?limit=1000`);
-      const cases = response.data;
-      
-      // Calculer les statistiques
-      const stats = calculateStats(cases);
-      setStats(stats);
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-    } finally {
-      setLoading(false);
+    if (cases.length > 0) {
+      const calculatedStats = calculateStats(cases);
+      setStats(calculatedStats);
     }
-  };
+  }, [cases]);
 
   const calculateStats = (cases) => {
     const stats = {
@@ -215,38 +198,6 @@ const Dashboard = ({ onNavigateToData }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
-      {/* Header */}
-      <motion.header 
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="gradient-primary shadow-orange-lg"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <BarChart3 className="h-6 w-6 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-white font-display">
-                UPC Dashboard
-              </h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={onNavigateToData}
-                className="bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors flex items-center space-x-2"
-              >
-                <FileText className="h-4 w-4" />
-                <span>Voir les données</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
@@ -333,7 +284,6 @@ const Dashboard = ({ onNavigateToData }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Actions rapides</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
-                onClick={onNavigateToData}
                 className="flex items-center justify-center space-x-3 p-4 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
               >
                 <Search className="h-5 w-5 text-orange-600" />

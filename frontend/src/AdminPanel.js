@@ -20,35 +20,14 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
-const AdminPanel = ({ onClose }) => {
-  const [cases, setCases] = useState([]);
-  const [loading, setLoading] = useState(true);
+const AdminPanel = ({ onClose, cases = [], onCaseUpdate }) => {
+  const [loading, setLoading] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
   const [editingCase, setEditingCase] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, commented, important, none
   const [showAddForm, setShowAddForm] = useState(false);
   const [notification, setNotification] = useState(null);
-
-  useEffect(() => {
-    fetchCases();
-  }, []);
-
-  const fetchCases = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${BACKEND_URL}/api/cases?limit=1000`);
-      setCases(response.data);
-    } catch (error) {
-      console.error('Error fetching cases:', error);
-      setNotification({
-        message: 'Erreur lors du chargement des cas',
-        type: 'error'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredCases = cases.filter(case_item => {
     const matchesSearch = case_item.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,13 +42,14 @@ const AdminPanel = ({ onClose }) => {
   });
 
   const handleSaveCase = async (caseData) => {
+    setLoading(true);
     try {
       const response = await axios.put(`${BACKEND_URL}/api/cases/${caseData.id}`, caseData);
       
-      // Mettre à jour la liste locale
-      setCases(prevCases => 
-        prevCases.map(c => c.id === caseData.id ? response.data : c)
-      );
+      // Mettre à jour via le callback parent
+      if (onCaseUpdate) {
+        onCaseUpdate(response.data);
+      }
       
       setEditingCase(null);
       setNotification({
@@ -82,6 +62,8 @@ const AdminPanel = ({ onClose }) => {
         message: 'Erreur lors de la mise à jour',
         type: 'error'
       });
+    } finally {
+      setLoading(false);
     }
   };
 

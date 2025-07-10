@@ -1,5 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { useTable, useSortBy, useFilters, usePagination, useGlobalFilter } from '@tanstack/react-table';
+import React, { useState, useMemo } from 'react';
+import { 
+  useReactTable, 
+  getCoreRowModel, 
+  getSortedRowModel, 
+  getFilteredRowModel, 
+  getPaginationRowModel,
+  flexRender
+} from '@tanstack/react-table';
 import { 
   Search, 
   Filter, 
@@ -9,15 +16,10 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
-  Settings,
   FileText,
-  Calendar,
   Building2,
-  Users,
   Tag,
-  ExternalLink,
   BarChart3,
-  PieChart,
   TrendingUp,
   Star,
   MessageSquare
@@ -42,20 +44,7 @@ const GlobalFilter = ({ globalFilter, setGlobalFilter }) => {
   );
 };
 
-// Composant de filtre par colonne
-const ColumnFilter = ({ column }) => {
-  const { filterValue, setFilter } = column;
-  
-  return (
-    <input
-      type="text"
-      value={filterValue || ''}
-      onChange={e => setFilter(e.target.value)}
-      placeholder={`Filtrer ${column.Header}...`}
-      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
-    />
-  );
-};
+
 
 // Composant de statistiques
 const TableStats = ({ data, filteredData }) => {
@@ -323,80 +312,87 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
 
   const columns = useMemo(() => [
     {
-      Header: 'Date',
-      accessor: 'date',
-      Cell: ({ value }) => {
+      header: 'Date',
+      accessorKey: 'date',
+      cell: ({ getValue }) => {
+        const value = getValue();
         try {
           return format(new Date(value), 'dd/MM/yyyy');
         } catch {
           return value;
         }
-      },
-      Filter: ColumnFilter
+      }
     },
     {
-      Header: 'Référence',
-      accessor: 'reference',
-      Filter: ColumnFilter
+      header: 'Référence',
+      accessorKey: 'reference'
     },
     {
-      Header: 'Type',
-      accessor: 'type',
-      Cell: ({ value }) => (
-        <span className={`romulus-badge ${value === 'Order' ? 'romulus-badge-primary' : 'romulus-badge-secondary'}`}>
-          {value}
-        </span>
-      ),
-      Filter: ColumnFilter
+      header: 'Type',
+      accessorKey: 'type',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return (
+          <span className={`romulus-badge ${value === 'Order' ? 'romulus-badge-primary' : 'romulus-badge-secondary'}`}>
+            {value}
+          </span>
+        );
+      }
     },
     {
-      Header: 'Division',
-      accessor: 'court_division',
-      Cell: ({ value }) => (
-        <div className="flex items-center space-x-2">
-          <Building2 className="h-4 w-4 text-gray-400" />
-          <span>{value}</span>
-        </div>
-      ),
-      Filter: ColumnFilter
+      header: 'Division',
+      accessorKey: 'court_division',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return (
+          <div className="flex items-center space-x-2">
+            <Building2 className="h-4 w-4 text-gray-400" />
+            <span>{value}</span>
+          </div>
+        );
+      }
     },
     {
-      Header: 'Parties',
-      accessor: 'parties',
-      Cell: ({ value }) => (
-        <div className="max-w-xs">
-          {Array.isArray(value) ? (
-            <div className="flex flex-wrap gap-1">
-              {value.slice(0, 2).map((party, idx) => (
-                <span key={idx} className="romulus-badge-secondary text-xs">
-                  {party}
-                </span>
-              ))}
-              {value.length > 2 && (
-                <span className="text-xs text-gray-500">+{value.length - 2}</span>
-              )}
-            </div>
-          ) : (
-            <span className="text-sm">{value}</span>
-          )}
-        </div>
-      ),
-      Filter: ColumnFilter
+      header: 'Parties',
+      accessorKey: 'parties',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return (
+          <div className="max-w-xs">
+            {Array.isArray(value) ? (
+              <div className="flex flex-wrap gap-1">
+                {value.slice(0, 2).map((party, idx) => (
+                  <span key={idx} className="romulus-badge-secondary text-xs">
+                    {party}
+                  </span>
+                ))}
+                {value.length > 2 && (
+                  <span className="text-xs text-gray-500">+{value.length - 2}</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-sm">{value}</span>
+            )}
+          </div>
+        );
+      }
     },
     {
-      Header: 'Résumé',
-      accessor: 'summary',
-      Cell: ({ value }) => (
-        <div className="max-w-xs">
-          <p className="text-sm text-gray-600 line-clamp-2">{value}</p>
-        </div>
-      ),
-      Filter: ColumnFilter
+      header: 'Résumé',
+      accessorKey: 'summary',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return (
+          <div className="max-w-xs">
+            <p className="text-sm text-gray-600 line-clamp-2">{value}</p>
+          </div>
+        );
+      }
     },
     {
-      Header: 'Admin',
-      accessor: 'admin_status',
-      Cell: ({ row }) => {
+      header: 'Admin',
+      accessorKey: 'admin_status',
+      cell: ({ row }) => {
         const case_item = row.original;
         const hasApports = case_item.apports && case_item.apports.length > 0;
         const hasSummary = case_item.admin_summary;
@@ -422,69 +418,71 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
           </div>
         );
       },
-      disableSortBy: true,
-      disableFilters: true
+      enableSorting: false
     },
     {
-      Header: 'Actions',
-      accessor: 'id',
-      Cell: ({ value, row }) => (
-        <div className="flex space-x-2">
-          <button
-            onClick={() => onViewDetails(value)}
-            className="p-1 text-orange-600 hover:text-orange-700 transition-colors"
-            title="Voir les détails"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-          {row.original.documents && row.original.documents.length > 0 && (
-            <a
-              href={row.original.documents[0].url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-              title="Télécharger"
+      header: 'Actions',
+      accessorKey: 'id',
+      cell: ({ getValue, row }) => {
+        const value = getValue();
+        return (
+          <div className="flex space-x-2">
+            <button
+              onClick={() => onViewDetails(value)}
+              className="p-1 text-orange-600 hover:text-orange-700 transition-colors"
+              title="Voir les détails"
             >
-              <Download className="h-4 w-4" />
-            </a>
-          )}
-        </div>
-      ),
-      disableSortBy: true,
-      disableFilters: true
+              <Eye className="h-4 w-4" />
+            </button>
+            {row.original.documents && row.original.documents.length > 0 && (
+              <a
+                href={row.original.documents[0].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                title="Télécharger"
+              >
+                <Download className="h-4 w-4" />
+              </a>
+            )}
+          </div>
+        );
+      },
+      enableSorting: false
     }
   ], [onViewDetails]);
 
-  const {
-    getTableProps,
-    getTableBodyProps,
-    headerGroups,
-    page,
-    prepareRow,
-    state,
-    setGlobalFilter,
-    nextPage,
-    previousPage,
-    canNextPage,
-    canPreviousPage,
-    pageOptions,
-    gotoPage,
-    pageCount,
-    setPageSize,
-    filteredData
-  } = useTable(
-    {
-      columns,
-      data,
-      initialState: { pageSize: 20 }
-    },
-    useFilters,
-    useGlobalFilter,
-    useSortBy,
-    usePagination
-  );
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [sorting, setSorting] = useState([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
 
-  const { globalFilter, pageIndex, pageSize } = state;
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    globalFilterFn: 'includesString',
+    state: {
+      globalFilter,
+      sorting,
+      pagination,
+    },
+    initialState: {
+      pagination: {
+        pageSize: 20,
+      },
+    },
+  });
+
+
 
   return (
     <div className="space-y-6">
@@ -513,7 +511,7 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
           <GlobalFilter globalFilter={globalFilter} setGlobalFilter={setGlobalFilter} />
           
           <button
-            onClick={() => onExport && onExport(filteredData)}
+            onClick={() => onExport && onExport(table.getFilteredRowModel().rows.map(row => row.original))}
             className="romulus-btn-primary flex items-center space-x-2"
           >
             <Download className="h-4 w-4" />
@@ -537,7 +535,7 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       </AnimatePresence>
 
       {/* Statistiques */}
-      <TableStats data={data} filteredData={filteredData} />
+      <TableStats data={data} filteredData={table.getFilteredRowModel().rows.map(row => row.original)} />
 
       {/* Filtres par colonne */}
       <AnimatePresence>
@@ -551,14 +549,20 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
           >
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtres par colonne</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {headerGroups[0].headers
-                .filter(column => column.canFilter)
+              {table.getAllColumns()
+                .filter(column => column.getCanFilter())
                 .map(column => (
                   <div key={column.id}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {column.Header}
+                      {column.columnDef.header}
                     </label>
-                    {column.render('Filter')}
+                    <input
+                      type="text"
+                      value={column.getFilterValue() || ''}
+                      onChange={e => column.setFilterValue(e.target.value)}
+                      placeholder={`Filtrer ${column.columnDef.header}...`}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    />
                   </div>
                 ))}
             </div>
@@ -569,50 +573,43 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       {/* Tableau */}
       <div className="romulus-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table {...getTableProps()} className="w-full">
+          <table className="w-full">
             <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-              {headerGroups.map(headerGroup => (
-                <tr {...headerGroup.getHeaderGroupProps()}>
-                  {headerGroup.headers.map(column => (
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
                     <th
-                      {...column.getHeaderProps(column.getSortByToggleProps())}
+                      key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
                       className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-orange-600 transition-colors"
                     >
                       <div className="flex items-center space-x-2">
-                        <span>{column.render('Header')}</span>
-                        {column.isSorted ? (
-                          column.isSortedDesc ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronUp className="h-4 w-4" />
-                          )
-                        ) : (
-                          <div className="w-4 h-4" />
-                        )}
+                        <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                        {{
+                          asc: <ChevronUp className="h-4 w-4" />,
+                          desc: <ChevronDown className="h-4 w-4" />,
+                        }[header.column.getIsSorted()] ?? <div className="w-4 h-4" />}
                       </div>
                     </th>
                   ))}
                 </tr>
               ))}
             </thead>
-            <tbody {...getTableBodyProps()}>
-              {page.map(row => {
-                prepareRow(row);
-                return (
-                  <motion.tr
-                    {...row.getRowProps()}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="border-b border-gray-200 hover:bg-orange-50 transition-colors"
-                  >
-                    {row.cells.map(cell => (
-                      <td {...cell.getCellProps()} className="px-4 py-3">
-                        {cell.render('Cell')}
-                      </td>
-                    ))}
-                  </motion.tr>
-                );
-              })}
+            <tbody>
+              {table.getRowModel().rows.map(row => (
+                <motion.tr
+                  key={row.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="border-b border-gray-200 hover:bg-orange-50 transition-colors"
+                >
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id} className="px-4 py-3">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </motion.tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -621,29 +618,29 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
         <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => gotoPage(0)}
-              disabled={!canPreviousPage}
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
               className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
             >
               {'<<'}
             </button>
             <button
-              onClick={() => previousPage()}
-              disabled={!canPreviousPage}
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
               className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
-              onClick={() => nextPage()}
-              disabled={!canNextPage}
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
               className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             <button
-              onClick={() => gotoPage(pageCount - 1)}
-              disabled={!canNextPage}
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
               className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
             >
               {'>>'}
@@ -654,13 +651,13 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
             <span className="text-sm text-gray-600">
               Page{' '}
               <strong>
-                {pageIndex + 1} sur {pageOptions.length}
+                {table.getState().pagination.pageIndex + 1} sur {table.getPageCount()}
               </strong>
             </span>
             
             <select
-              value={pageSize}
-              onChange={e => setPageSize(Number(e.target.value))}
+              value={table.getState().pagination.pageSize}
+              onChange={e => table.setPageSize(Number(e.target.value))}
               className="border border-gray-300 rounded px-2 py-1 text-sm"
             >
               {[10, 20, 30, 40, 50].map(pageSize => (

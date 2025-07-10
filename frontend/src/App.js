@@ -11,18 +11,17 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  Gavel,
   Scale,
   Building2,
   Users,
   Tag,
   ExternalLink,
-  Settings,
   Database,
   Flame,
   Table,
   BarChart3,
   ArrowLeft,
+  ArrowRight,
   Shield,
   Star,
   MessageSquare
@@ -40,7 +39,7 @@ import Notification from './Notification';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,19 +125,16 @@ function App() {
     });
   }, []);
 
-  // Effet pour mettre à jour les données filtrées
-  useEffect(() => {
-    const filtered = filterCases(allCases, searchTerm, filters);
-    setFilteredCases(filtered);
-  }, [allCases, searchTerm, filters, filterCases]);
+  const fetchAvailableFilters = async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/filters`);
+      setAvailableFilters(response.data);
+    } catch (error) {
+      console.error('Error fetching filters:', error);
+    }
+  };
 
-  useEffect(() => {
-    fetchCases();
-    fetchAvailableFilters();
-    fetchAllCases(); // Récupérer toutes les données pour le tableau
-  }, [currentPage, searchTerm, filters]);
-
-  const fetchCases = async () => {
+  const fetchCases = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -163,7 +159,26 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, filters]);
+
+  // Effet pour mettre à jour les données filtrées (uniquement pour la vue cartes)
+  useEffect(() => {
+    if (viewMode === 'cards') {
+      const filtered = filterCases(allCases, searchTerm, filters);
+      setFilteredCases(filtered);
+    }
+  }, [allCases, searchTerm, filters, filterCases, viewMode]);
+
+  useEffect(() => {
+    fetchCases();
+    fetchAvailableFilters();
+    fetchAllCases(); // Récupérer toutes les données pour le tableau
+  }, [currentPage, searchTerm, filters, fetchCases]);
+
+  // Effet pour récupérer toutes les données au chargement initial
+  useEffect(() => {
+    fetchAllCases();
+  }, []);
 
   // Fonction pour récupérer toutes les données (pour le tableau)
   const fetchAllCases = async () => {
@@ -215,15 +230,6 @@ function App() {
     }
   };
 
-  const fetchAvailableFilters = async () => {
-    try {
-      const response = await axios.get(`${BACKEND_URL}/api/filters`);
-      setAvailableFilters(response.data);
-    } catch (error) {
-      console.error('Error fetching filters:', error);
-    }
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
@@ -256,13 +262,18 @@ function App() {
     // Réinitialiser la page quand on change de vue
     setCurrentPage(1);
     
-    // Afficher une notification si des filtres sont actifs
-    if (newMode === 'table' && (searchTerm || Object.values(filters).some(v => v))) {
+    // Si on passe en vue tableau, s'assurer que toutes les données sont disponibles
+    if (newMode === 'table') {
+      setFilteredCases(allCases);
       setNotification({
-        message: `Vue tableau avec ${totalFilteredCount} résultats filtrés sur ${totalCount} total`,
+        message: `Vue tableau avec ${allCases.length} décisions`,
         type: 'info',
         duration: 3000
       });
+    } else {
+      // Si on passe en vue cartes, appliquer les filtres
+      const filtered = filterCases(allCases, searchTerm, filters);
+      setFilteredCases(filtered);
     }
   };
 
@@ -302,10 +313,8 @@ function App() {
     setSelectedCaseId(caseId);
   };
 
-  // Calculer le nombre total de pages et le nombre total d'éléments selon la vue
+  // Calculer le nombre total de pages
   const totalPages = Math.ceil(totalCount / itemsPerPage);
-  const totalFilteredCount = filteredCases.length;
-  const displayCount = viewMode === 'table' ? totalFilteredCount : totalCount;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
@@ -359,6 +368,18 @@ function App() {
                 </button>
               </div>
 
+              {/* Bouton "Voir les données" visible uniquement sur le dashboard */}
+              {currentView === 'dashboard' && (
+                <button
+                  onClick={handleNavigateToData}
+                  className="bg-white/20 text-white px-3 py-2 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors flex items-center space-x-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Voir les données</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
+
               <button
                 onClick={() => setShowSync(!showSync)}
                 className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
@@ -395,7 +416,10 @@ function App() {
       {/* Main Content */}
       <AnimatePresence mode="wait">
         {currentView === 'dashboard' ? (
-          <Dashboard onNavigateToData={handleNavigateToData} />
+          <Dashboard 
+            cases={allCases}
+            loading={loading || allCases.length === 0}
+          />
         ) : (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Back to Dashboard Button */}
@@ -618,12 +642,7 @@ function App() {
               <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                 <FileText className="h-5 w-5 text-orange-600" />
                 <span>
-                  {viewMode === 'table' ? 'Cases Found' : 'Cases Found'}: {displayCount}
-                  {viewMode === 'table' && totalFilteredCount !== totalCount && (
-                    <span className="text-sm text-gray-500 ml-2">
-                      (filtré sur {totalCount} total)
-                    </span>
-                  )}
+                  Cases Found: {totalCount}
                 </span>
               </h3>
               
@@ -700,11 +719,21 @@ function App() {
               </div>
             </div>
           ) : viewMode === 'table' ? (
-            <DataTable 
-              data={filteredCases} 
-              onViewDetails={handleViewDetails}
-              onExport={handleExport}
-            />
+            allCases.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="loading-dots">
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                </div>
+              </div>
+            ) : (
+              <DataTable 
+                data={allCases} 
+                onViewDetails={handleViewDetails}
+                onExport={handleExport}
+              />
+            )
           ) : (
             <div className="space-y-4">
               {cases.map((case_item, index) => (
@@ -896,7 +925,16 @@ function App() {
       {/* Admin Panel */}
       <AnimatePresence>
         {showAdmin && (
-          <AdminPanel onClose={() => setShowAdmin(false)} />
+          <AdminPanel 
+            onClose={() => setShowAdmin(false)} 
+            cases={allCases}
+            onCaseUpdate={(updatedCase) => {
+              // Mettre à jour les données locales
+              setAllCases(prev => prev.map(c => c.id === updatedCase.id ? updatedCase : c));
+              setCases(prev => prev.map(c => c.id === updatedCase.id ? updatedCase : c));
+              setFilteredCases(prev => prev.map(c => c.id === updatedCase.id ? updatedCase : c));
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
