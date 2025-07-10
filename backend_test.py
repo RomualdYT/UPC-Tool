@@ -481,10 +481,13 @@ def run_tests():
     
     # Check for timeouts or other issues
     if result.errors or result.failures:
-        print("\n❌ Some tests failed or had errors. The backend API may be unresponsive.")
-        print("   This could be due to the long-running scraper process blocking the main thread.")
+        print("\n❌ Some tests failed or had errors.")
+        for error in result.errors:
+            print(f"   ERROR: {error[0]} - {error[1]}")
+        for failure in result.failures:
+            print(f"   FAILURE: {failure[0]} - {failure[1]}")
     else:
-        print("\n✅ All tests passed! The backend API is responsive.")
+        print("\n✅ All tests passed! UPC scraper improvements are working correctly.")
     
     return len(result.errors) == 0 and len(result.failures) == 0
 
