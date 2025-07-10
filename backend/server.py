@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 from pymongo import MongoClient
+from contextlib import asynccontextmanager
 import os
 import uuid
 from enum import Enum
@@ -26,7 +27,83 @@ db = client['upc_legal']
 cases_collection = db['cases']
 documents_collection = db['documents']
 
-app = FastAPI(title="UPC Legal API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    print("Starting up...")
+    # Create text index for search
+    try:
+        cases_collection.create_index([("summary", "text"), ("parties", "text"), ("reference", "text")])
+    except Exception as e:
+        print(f"Index creation warning: {e}")
+    
+    # Check if we have any cases in the database
+    case_count = cases_collection.count_documents({})
+    
+    if case_count == 0:
+        print("No cases found in database. Loading sample data...")
+        # Fallback to sample data
+        sample_cases = [
+            {
+                "_id": str(uuid.uuid4()),
+                "date": "2025-01-08",
+                "type": "Order",
+                "registry_number": "App_31860/2025",
+                "order_reference": "ORD_32533/2025",
+                "court_division": "Court of First Instance - Milan (IT) Local Division",
+                "type_of_action": "Generic application",
+                "language_of_proceedings": "EN",
+                "parties": ["Progress Maschinen & Automation AG", "AWM s.r.l.", "Schnell s.p.a."],
+                "summary": "The Milan Local Division, under Judge Pierluigi Perrotti, issued an order in the case between claimant Progress Maschinen & Automation AG and defendants AWM s.r.l. and Schnell s.p.a. regarding patent infringement and counterclaim for patent revocation.",
+                "legal_norms": ["Art. 32 UPCA", "Rule 13 RoP"],
+                "tags": ["patent infringement", "counterclaim", "revocation"],
+                "documents": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "title": "Download Order (EN)",
+                        "url": "/api/documents/sample_order_en.pdf",
+                        "language": "EN",
+                        "case_id": ""
+                    }
+                ]
+            },
+            {
+                "_id": str(uuid.uuid4()),
+                "date": "2025-01-03",
+                "type": "Order",
+                "registry_number": "App_28457/2025",
+                "order_reference": "ORD_29288/2025",
+                "court_division": "Court of First Instance - Munich (DE) Local Division",
+                "type_of_action": "Generic application",
+                "language_of_proceedings": "DE",
+                "parties": ["Renault Deutschland AG", "Renault Retail Group Deutschland GmbH"],
+                "summary": "The President of the Court of First Instance in Munich issued an order concerning an application by Renault entities to change the language of proceedings from German to English.",
+                "legal_norms": ["Art. 49 UPCA", "Rule 321 RoP"],
+                "tags": ["language change", "procedural order"],
+                "documents": [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "title": "Download Order (EN)",
+                        "url": "/api/documents/sample_order_de.pdf",
+                        "language": "EN",
+                        "case_id": ""
+                    }
+                ]
+            }
+        ]
+        try:
+            cases_collection.insert_many(sample_cases)
+            print("Sample data loaded as fallback")
+        except Exception as e:
+            print(f"Sample data loading warning: {e}")
+    else:
+        print(f"Database already contains {case_count} cases")
+    
+    yield
+    # Shutdown
+    print("Shutting down...")
+
+app = FastAPI(title="UPC Legal API", version="1.0.0", lifespan=lifespan)
 
 # CORS middleware
 app.add_middleware(
