@@ -642,15 +642,22 @@ class UPCScraper:
                         'finnish': 'FI',
                         'portuguese': 'PT',
                         'slovenian': 'SI',
-                        'swedish': 'SV'
+                        'swedish': 'SV',
+                        'en': 'EN',
+                        'de': 'DE',
+                        'fr': 'FR',
+                        'it': 'IT',
+                        'nl': 'NL',
+                        'da': 'DA'
                     }
-                    return language_map.get(language, language.upper()[:2])
+                    return language_map.get(language, 'EN')  # Default to EN if not found
             
-            return None
+            # If no explicit language found, return EN as default
+            return 'EN'
             
         except Exception as e:
             logger.debug(f"Error extracting language: {e}")
-            return None
+            return 'EN'  # Default to English
     
     def _extract_keywords_from_detail(self, text: str) -> List[str]:
         """Extract Keywords from detail page"""
