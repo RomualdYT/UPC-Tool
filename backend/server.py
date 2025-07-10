@@ -83,6 +83,8 @@ class CaseModel(BaseModel):
     patent: Optional[str] = None
     legal_norms: List[str] = []
     tags: List[str] = []
+    keywords: List[str] = []
+    headnotes: Optional[str] = None
     summary: str
     documents: List[DocumentModel] = []
     admin_summary: Optional[str] = None
