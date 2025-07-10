@@ -182,11 +182,11 @@ const UPCSync = ({ onSync, syncing: externalSyncing }) => {
           
           <button
             onClick={handleSync}
-            disabled={issyncing}
+            disabled={externalSyncing}
             className="romulus-btn-primary flex items-center space-x-2"
           >
-            <RefreshCw className={`h-4 w-4 ${issyncing ? 'animate-spin' : ''}`} />
-            <span>{issyncing ? 'Syncing all pages...' : 'Sync All Data'}</span>
+            <RefreshCw className={`h-4 w-4 ${externalSyncing ? 'animate-spin' : ''}`} />
+            <span>{externalSyncing ? 'Syncing all pages...' : 'Sync All Data'}</span>
           </button>
         </div>
       </div>
