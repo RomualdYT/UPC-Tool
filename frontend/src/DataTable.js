@@ -18,7 +18,9 @@ import {
   ExternalLink,
   BarChart3,
   PieChart,
-  TrendingUp
+  TrendingUp,
+  Star,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -390,6 +392,38 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
         </div>
       ),
       Filter: ColumnFilter
+    },
+    {
+      Header: 'Admin',
+      accessor: 'admin_status',
+      Cell: ({ row }) => {
+        const case_item = row.original;
+        const hasApports = case_item.apports && case_item.apports.length > 0;
+        const hasSummary = case_item.admin_summary;
+        
+        if (!hasApports && !hasSummary) {
+          return <span className="text-gray-400 text-xs">-</span>;
+        }
+        
+        return (
+          <div className="flex flex-wrap gap-1">
+            {hasApports && (
+              <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
+                <Star className="h-3 w-3" />
+                <span>Important</span>
+              </span>
+            )}
+            {hasSummary && (
+              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center space-x-1">
+                <MessageSquare className="h-3 w-3" />
+                <span>Commenté</span>
+              </span>
+            )}
+          </div>
+        );
+      },
+      disableSortBy: true,
+      disableFilters: true
     },
     {
       Header: 'Actions',

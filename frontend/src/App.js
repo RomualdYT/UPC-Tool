@@ -22,7 +22,10 @@ import {
   Flame,
   Table,
   BarChart3,
-  ArrowLeft
+  ArrowLeft,
+  Shield,
+  Star,
+  MessageSquare
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -30,6 +33,7 @@ import UPCSync from './UPCSync';
 import CaseDetail from './CaseDetail';
 import DataTable from './DataTable';
 import Dashboard from './Dashboard';
+import AdminPanel from './AdminPanel';
 import { exportData, exportStats } from './ExportUtils';
 import Notification from './Notification';
 
@@ -63,6 +67,7 @@ function App() {
   const [filteredCases, setFilteredCases] = useState([]); // Données filtrées pour le tableau
   const [notification, setNotification] = useState(null); // Notification système
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' ou 'data'
+  const [showAdmin, setShowAdmin] = useState(false); // Panneau d'administration
 
   const itemsPerPage = 20;
 
@@ -360,6 +365,14 @@ function App() {
                 title="UPC Data Sync"
               >
                 <Database className="h-5 w-5 text-white" />
+              </button>
+
+              <button
+                onClick={() => setShowAdmin(true)}
+                className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
+                title="Administration"
+              >
+                <Shield className="h-5 w-5 text-white" />
               </button>
               
               <div className="relative">
@@ -712,6 +725,19 @@ function App() {
                           <span className="text-sm text-gray-500">
                             {formatDate(case_item.date)}
                           </span>
+                          {/* Badges d'administration */}
+                          {case_item.apports && case_item.apports.length > 0 && (
+                            <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
+                              <Star className="h-3 w-3" />
+                              <span>Important</span>
+                            </span>
+                          )}
+                          {case_item.admin_summary && (
+                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center space-x-1">
+                              <MessageSquare className="h-3 w-3" />
+                              <span>Commenté</span>
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <Building2 className="h-4 w-4 text-gray-400" />
@@ -744,6 +770,40 @@ function App() {
                               <span>{tag}</span>
                             </span>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Informations d'administration */}
+                      {case_item.admin_summary && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <MessageSquare className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">Résumé administratif</span>
+                          </div>
+                          <p className="text-sm text-blue-700 line-clamp-2">{case_item.admin_summary}</p>
+                        </div>
+                      )}
+
+                      {case_item.apports && case_item.apports.length > 0 && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Star className="h-4 w-4 text-red-600" />
+                            <span className="text-sm font-medium text-red-800">Apports juridiques ({case_item.apports.length})</span>
+                          </div>
+                          <div className="space-y-2">
+                            {case_item.apports.slice(0, 2).map((apport, idx) => (
+                              <div key={idx} className="text-sm">
+                                <span className="font-medium text-red-700">Art. {apport.article_number}</span>
+                                <span className="text-red-600"> - {apport.regulation}</span>
+                                {apport.citation && (
+                                  <p className="text-xs text-red-600 mt-1 italic">"{apport.citation}"</p>
+                                )}
+                              </div>
+                            ))}
+                            {case_item.apports.length > 2 && (
+                              <p className="text-xs text-red-600">+{case_item.apports.length - 2} autres apports</p>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -830,6 +890,13 @@ function App() {
             duration={notification.duration}
             onClose={closeNotification}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Admin Panel */}
+      <AnimatePresence>
+        {showAdmin && (
+          <AdminPanel onClose={() => setShowAdmin(false)} />
         )}
       </AnimatePresence>
     </div>

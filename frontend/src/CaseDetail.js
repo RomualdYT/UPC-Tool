@@ -14,7 +14,10 @@ import {
   Edit3,
   Save,
   ExternalLink,
-  Loader
+  Loader,
+  Star,
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -245,6 +248,68 @@ const CaseDetail = ({ caseId, onClose }) => {
                   </div>
                 )}
               </div>
+
+              {/* Administrative Information */}
+              {(caseData.admin_summary || (caseData.apports && caseData.apports.length > 0)) && (
+                <div className="romulus-card border-blue-200">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Administrative Information</h3>
+                    <div className="flex items-center space-x-2">
+                      {caseData.apports && caseData.apports.length > 0 && (
+                        <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
+                          <Star className="h-3 w-3" />
+                          <span>Important</span>
+                        </span>
+                      )}
+                      {caseData.admin_summary && (
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center space-x-1">
+                          <MessageSquare className="h-3 w-3" />
+                          <span>Commenté</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Administrative Summary */}
+                  {caseData.admin_summary && (
+                    <div className="mb-6">
+                      <h4 className="text-md font-medium text-gray-900 mb-2 flex items-center space-x-2">
+                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                        <span>Résumé administratif</span>
+                      </h4>
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-gray-700 leading-relaxed">{caseData.admin_summary}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Apports juridiques */}
+                  {caseData.apports && caseData.apports.length > 0 && (
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900 mb-3 flex items-center space-x-2">
+                        <BookOpen className="h-4 w-4 text-red-600" />
+                        <span>Apports juridiques ({caseData.apports.length})</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {caseData.apports.map((apport, index) => (
+                          <div key={index} className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="font-medium text-red-800">Article {apport.article_number}</span>
+                              <span className="text-red-600">-</span>
+                              <span className="text-red-700">{apport.regulation}</span>
+                            </div>
+                            {apport.citation && (
+                              <div className="mt-2">
+                                <p className="text-sm text-red-600 italic">"{apport.citation}"</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Tags */}
               {caseData.tags && caseData.tags.length > 0 && (

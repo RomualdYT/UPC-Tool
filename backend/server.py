@@ -59,6 +59,12 @@ class DocumentModel(BaseModel):
     language: str
     case_id: str
 
+class ApportModel(BaseModel):
+    id: int
+    article_number: str
+    regulation: str
+    citation: str
+
 class CaseModel(BaseModel):
     id: str
     date: str
@@ -75,6 +81,12 @@ class CaseModel(BaseModel):
     tags: List[str] = []
     summary: str
     documents: List[DocumentModel] = []
+    admin_summary: Optional[str] = None
+    apports: Optional[List[ApportModel]] = []
+
+class CaseUpdateModel(BaseModel):
+    admin_summary: Optional[str] = None
+    apports: Optional[List[ApportModel]] = None
 
 class SearchFilters(BaseModel):
     keywords: Optional[str] = None
@@ -185,6 +197,39 @@ async def get_case(case_id: str):
         # Convert ObjectId to string for serialization
         case["id"] = str(case.pop("_id"))
         return case
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/cases/{case_id}")
+async def update_case(case_id: str, case_update: CaseUpdateModel):
+    """Update a case with administrative data"""
+    try:
+        # Check if case exists
+        case = cases_collection.find_one({"_id": case_id})
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        # Prepare update data
+        update_data = {}
+        if case_update.admin_summary is not None:
+            update_data["admin_summary"] = case_update.admin_summary
+        if case_update.apports is not None:
+            update_data["apports"] = [apport.dict() for apport in case_update.apports]
+        
+        # Update the case
+        result = cases_collection.update_one(
+            {"_id": case_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="No changes made")
+        
+        # Return updated case
+        updated_case = cases_collection.find_one({"_id": case_id})
+        updated_case["id"] = str(updated_case.pop("_id"))
+        return updated_case
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
