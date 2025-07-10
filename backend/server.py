@@ -14,11 +14,19 @@ import threading
 
 # Import the scraper at module level
 try:
+    import sys
+    import os
+    # Add current directory to path for imports
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    
     from upc_scraper import UPCScraper
     SCRAPER_AVAILABLE = True
-except ImportError:
+    print("UPCScraper imported successfully")
+except ImportError as e:
     SCRAPER_AVAILABLE = False
-    print("Warning: UPCScraper not available")
+    print(f"Warning: UPCScraper not available: {e}")
 
 # MongoDB connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
