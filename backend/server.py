@@ -178,7 +178,7 @@ class CaseModel(BaseModel):
     order_reference: str
     case_number: Optional[str] = None
     court_division: str
-    type_of_action: ActionType
+    type_of_action: str  # Changed from ActionType enum to simple string
     language_of_proceedings: Language
     parties: List[str]
     patent: Optional[str] = None
