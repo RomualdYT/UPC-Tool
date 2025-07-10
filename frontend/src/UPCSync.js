@@ -117,7 +117,7 @@ const UPCSync = ({ onSync, syncing: externalSyncing }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-primary-600 font-medium">Total Cases</p>
-                <p className="text-2xl font-bold text-primary-900">{syncStatus.total_cases}</p>
+                <p className="text-2xl font-bold text-primary-900">{totalCases}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-primary-600" />
             </div>
@@ -137,7 +137,7 @@ const UPCSync = ({ onSync, syncing: externalSyncing }) => {
         </div>
 
         {/* Stats */}
-        {stats && (
+        {displayStats && (
           <div className="space-y-4">
             <div className="bg-accent-50 p-4 rounded-lg">
               <div className="flex items-center justify-between mb-2">
@@ -147,19 +147,19 @@ const UPCSync = ({ onSync, syncing: externalSyncing }) => {
               <div className="space-y-2 text-sm text-accent-900">
                 <div className="flex justify-between">
                   <span>Case Types:</span>
-                  <span>{stats.case_types.length}</span>
+                  <span>{displayStats.case_types?.length || Object.keys(displayStats.casesByType || {}).length || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Court Divisions:</span>
-                  <span>{stats.court_divisions.length}</span>
+                  <span>{displayStats.court_divisions?.length || Object.keys(displayStats.casesByDivision || {}).length || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Languages:</span>
-                  <span>{stats.languages.length}</span>
+                  <span>{displayStats.languages?.length || Object.keys(displayStats.casesByLanguage || {}).length || 0}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Recent Cases:</span>
-                  <span>{stats.recent_cases}</span>
+                  <span>{displayStats.recent_cases || displayStats.recentCases?.length || 0}</span>
                 </div>
               </div>
             </div>
