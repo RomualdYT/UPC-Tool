@@ -10,6 +10,7 @@ import uuid
 from enum import Enum
 import asyncio
 import threading
+import upc_scraper
 from upc_scraper import UPCScraper
 
 # MongoDB connection
