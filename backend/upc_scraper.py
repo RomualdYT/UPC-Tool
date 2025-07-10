@@ -249,6 +249,124 @@ class UPCScraper:
             logger.warning(f"Error parsing date '{date_text}': {e}")
             return datetime.now().strftime('%Y-%m-%d')
     
+    def _parse_parties_from_text(self, parties_text: str) -> List[str]:
+        """Parse parties from text like 'Company A v. Company B'"""
+        try:
+            parties = []
+            
+            # Split on common separators
+            if ' v. ' in parties_text:
+                parts = parties_text.split(' v. ')
+                for part in parts:
+                    # Split on line breaks for multiple parties on same side
+                    sub_parties = part.split('\n')
+                    for sub_party in sub_parties:
+                        party = sub_party.strip()
+                        if party and party not in parties:
+                            parties.append(party)
+            else:
+                # Split on line breaks
+                sub_parties = parties_text.split('\n')
+                for sub_party in sub_parties:
+                    party = sub_party.strip()
+                    if party and party not in parties:
+                        parties.append(party)
+            
+            return parties[:10]  # Limit to 10 parties
+            
+        except Exception as e:
+            logger.warning(f"Error parsing parties '{parties_text}': {e}")
+            return []
+    
+    def _extract_documents_from_cell(self, cell) -> List[Dict]:
+        """Extract document links from a table cell"""
+        documents = []
+        try:
+            # Find all links in the cell
+            links = cell.find_all('a', href=True)
+            for link in links:
+                href = link['href']
+                if href.endswith('.pdf') or 'pdf' in href.lower():
+                    doc_id = str(uuid.uuid4())
+                    documents.append({
+                        'id': doc_id,
+                        'title': link.get_text(strip=True) or "Download Document",
+                        'url': urljoin(self.base_url, href),
+                        'language': self._extract_language_from_filename(href),
+                        'case_id': ""
+                    })
+        except Exception as e:
+            logger.warning(f"Error extracting documents from cell: {e}")
+        
+        return documents
+    
+    def _extract_detail_link_from_cell(self, cell) -> Optional[str]:
+        """Extract the 'Full Details' link from a cell"""
+        try:
+            links = cell.find_all('a', href=True)
+            for link in links:
+                if 'Full Details' in link.get_text(strip=True):
+                    href = link['href']
+                    return urljoin(self.base_url, href)
+        except Exception as e:
+            logger.debug(f"Error extracting detail link: {e}")
+        
+        return None
+    
+    def _determine_decision_type(self, order_reference: str, type_of_action: str) -> str:
+        """Determine if it's an Order or Decision based on reference and type"""
+        if order_reference.startswith('ORD_'):
+            return "Order"
+        elif order_reference.startswith('DEC_'):
+            return "Decision"
+        elif 'decision' in type_of_action.lower():
+            return "Decision"
+        else:
+            return "Order"
+    
+    def _format_court_division(self, court_division: str) -> str:
+        """Format court division consistently"""
+        # Add "Court of First Instance - " prefix if not present
+        if not court_division.startswith('Court of'):
+            if 'Luxembourg' in court_division:
+                return f"Court of Appeal - {court_division}"
+            else:
+                return f"Court of First Instance - {court_division}"
+        return court_division
+    
+    def _extract_patent_from_text(self, text: str) -> Optional[str]:
+        """Extract patent number from text"""
+        pattern = r'(EP\d+|US\d+|WO\d+)'
+        match = re.search(pattern, text, re.I)
+        return match.group(1) if match else None
+    
+    def _extract_language_from_filename(self, filename: str) -> str:
+        """Extract language from filename like 'document_en.pdf'"""
+        if filename.endswith('_en.pdf'):
+            return 'EN'
+        elif filename.endswith('_de.pdf'):
+            return 'DE'
+        elif filename.endswith('_fr.pdf'):
+            return 'FR'
+        elif filename.endswith('_it.pdf'):
+            return 'IT'
+        elif filename.endswith('_nl.pdf'):
+            return 'NL'
+        else:
+            return 'EN'  # Default
+    
+    def _create_summary(self, parties_text: str, type_of_action: str, court_division: str) -> str:
+        """Create a summary from available information"""
+        summary = f"A {type_of_action.lower()} case in the {court_division}"
+        if parties_text:
+            parties = self._parse_parties_from_text(parties_text)
+            if len(parties) >= 2:
+                summary += f" involving {parties[0]} and {parties[1]}"
+            elif len(parties) == 1:
+                summary += f" involving {parties[0]}"
+        summary += "."
+        return summary
+    
     def _parse_natural_date(self, date_str: str) -> Optional[datetime]:
         """Parse natural language dates like '8 July 2025'"""
         try:
