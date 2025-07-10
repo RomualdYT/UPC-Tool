@@ -94,6 +94,90 @@ class UPCScraper:
             logger.error(f"Error scraping decisions page {page}: {e}")
             return []
     
+    def _extract_decision_from_row(self, row) -> Optional[Dict]:
+        """Extract decision data from a table row"""
+        try:
+            # Get all table cells from the row
+            cells = row.find_all(['td', 'th'])
+            
+            if len(cells) < 6:  # Should have 6 columns: Date, Registry/Order ref, Court, Type, Parties, Document
+                logger.debug(f"Row has only {len(cells)} cells, skipping")
+                return None
+            
+            # Extract data from each column
+            date_cell = cells[0]
+            registry_cell = cells[1]
+            court_cell = cells[2]
+            type_cell = cells[3]
+            parties_cell = cells[4]
+            document_cell = cells[5]
+            
+            # Extract date
+            date_text = date_cell.get_text(strip=True)
+            formatted_date = self._parse_date_from_text(date_text)
+            
+            # Extract registry number and order reference
+            registry_text = registry_cell.get_text(strip=True)
+            registry_lines = registry_text.split('\n')
+            registry_number = registry_lines[0].strip() if registry_lines else ""
+            order_reference = registry_lines[1].strip() if len(registry_lines) > 1 else ""
+            
+            # Extract court division
+            court_division = court_cell.get_text(strip=True)
+            
+            # Extract type of action
+            type_of_action = type_cell.get_text(strip=True)
+            
+            # Extract parties
+            parties_text = parties_cell.get_text(strip=True)
+            parties = self._parse_parties_from_text(parties_text)
+            
+            # Extract documents
+            documents = self._extract_documents_from_cell(document_cell)
+            
+            # Extract the "Full Details" link
+            detail_link = self._extract_detail_link_from_cell(registry_cell)
+            
+            # Get additional information from detail page
+            detailed_info = {}
+            if detail_link:
+                detailed_info = self._scrape_detail_page(detail_link)
+            
+            # Create decision data
+            decision_data = {
+                'id': str(uuid.uuid4()),
+                'date': formatted_date,
+                'type': self._determine_decision_type(order_reference, type_of_action),
+                'registry_number': registry_number,
+                'order_reference': order_reference,
+                'case_number': None,
+                'court_division': self._format_court_division(court_division),
+                'type_of_action': type_of_action,
+                'language_of_proceedings': detailed_info.get('language_of_proceedings', 'EN'),
+                'parties': parties,
+                'patent': self._extract_patent_from_text(parties_text),
+                'legal_norms': detailed_info.get('legal_norms', []),
+                'tags': detailed_info.get('tags', []),
+                'keywords': detailed_info.get('keywords', []),
+                'headnotes': detailed_info.get('headnotes', ''),
+                'summary': detailed_info.get('summary', self._create_summary(parties_text, type_of_action, court_division)),
+                'documents': documents
+            }
+            
+            # Validate essential fields
+            if not decision_data['registry_number'] and not decision_data['order_reference']:
+                logger.debug("No registry number or order reference found")
+                return None
+                
+            if not decision_data['date']:
+                logger.debug("No date found")
+                return None
+            
+            return decision_data
+            
+        except Exception as e:
+            logger.warning(f"Error extracting decision from row: {e}")
+            return None
 
     
     def _extract_date(self, text: str) -> str:
