@@ -27,6 +27,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { DynamicChart } from './ChartComponents';
+import { useTranslation } from 'react-i18next';
 
 // Composant de filtre global
 const GlobalFilter = ({ globalFilter, setGlobalFilter }) => {
@@ -307,6 +308,7 @@ const DataVisualization = ({ data }) => {
 };
 
 const DataTable = ({ data, onViewDetails, onExport }) => {
+  const { t } = useTranslation();
   const [showFilters, setShowFilters] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
 
@@ -324,8 +326,20 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       }
     },
     {
-      header: 'Référence',
-      accessorKey: 'reference'
+      header: 'Numéro d\'affaire',
+      accessorKey: 'registry_number',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return value || <span className="text-gray-400 text-xs">-</span>;
+      }
+    },
+    {
+      header: 'Numéro d\'ordonnance',
+      accessorKey: 'order_reference',
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return value || <span className="text-gray-400 text-xs">-</span>;
+      }
     },
     {
       header: 'Type',
@@ -347,7 +361,7 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
         return (
           <div className="flex items-center space-x-2">
             <Building2 className="h-4 w-4 text-gray-400" />
-            <span>{value}</span>
+            <span className="text-sm">{value}</span>
           </div>
         );
       }
@@ -426,23 +440,27 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       cell: ({ getValue, row }) => {
         const value = getValue();
         return (
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 min-w-[140px]">
             <button
               onClick={() => onViewDetails(value)}
-              className="p-1 text-orange-600 hover:text-orange-700 transition-colors"
-              title="Voir les détails"
+              className="romulus-btn-primary flex items-center gap-2 px-3 py-2 text-xs"
+              title={t('actions.viewDetails', 'Voir détails')}
+              aria-label={t('actions.viewDetails', 'Voir détails')}
             >
               <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('actions.viewDetails', 'Voir détails')}</span>
             </button>
             {row.original.documents && row.original.documents.length > 0 && (
               <a
                 href={row.original.documents[0].url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-                title="Télécharger"
+                className="romulus-btn-secondary flex items-center gap-2 px-3 py-2 text-xs"
+                title={t('actions.download', 'Télécharger')}
+                aria-label={t('actions.download', 'Télécharger')}
               >
                 <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('actions.download', 'Télécharger')}</span>
               </a>
             )}
           </div>
@@ -450,10 +468,12 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       },
       enableSorting: false
     }
-  ], [onViewDetails]);
+  ], [onViewDetails, t]);
 
   const [globalFilter, setGlobalFilter] = useState('');
-  const [sorting, setSorting] = useState([]);
+  const [sorting, setSorting] = useState([
+    { id: 'date', desc: true }
+  ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 20,
@@ -479,6 +499,9 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       pagination: {
         pageSize: 20,
       },
+      sorting: [
+        { id: 'date', desc: true }
+      ]
     },
   });
 
@@ -571,17 +594,17 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
       </AnimatePresence>
 
       {/* Tableau */}
-      <div className="romulus-card overflow-hidden">
+      <div className="romulus-card overflow-hidden shadow-xl rounded-2xl bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+          <table className="w-full min-w-[900px]">
+            <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white sticky top-0 z-10">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
                     <th
                       key={header.id}
                       onClick={header.column.getToggleSortingHandler()}
-                      className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-orange-600 transition-colors"
+                      className="px-5 py-4 text-left text-base font-semibold cursor-pointer hover:bg-orange-600 transition-colors select-none tracking-wide shadow-sm"
                     >
                       <div className="flex items-center space-x-2">
                         <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
@@ -596,15 +619,19 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map(row => (
+              {table.getRowModel().rows.map((row, idx) => (
                 <motion.tr
                   key={row.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="border-b border-gray-200 hover:bg-orange-50 transition-colors"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: idx * 0.01 }}
+                  className={
+                    `border-b border-gray-100 transition-colors ${
+                      idx % 2 === 0 ? 'bg-white' : 'bg-orange-50'
+                    } hover:bg-orange-100/70 focus-within:bg-orange-200`}
                 >
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-4 py-3">
+                    <td key={cell.id} className="px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 rounded-lg transition-shadow">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -614,39 +641,38 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+        {/* Pagination améliorée */}
+        <div className="flex flex-col md:flex-row items-center justify-between px-4 py-4 bg-gray-50 border-t border-gray-200 gap-2 md:gap-0">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
-              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
+              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50 rounded-full shadow"
             >
               {'<<'}
             </button>
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
+              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50 rounded-full shadow"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
+              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50 rounded-full shadow"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             <button
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
-              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50"
+              className="romulus-btn-secondary px-2 py-1 text-sm disabled:opacity-50 rounded-full shadow"
             >
               {'>>'}
             </button>
           </div>
-          
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
               Page{' '}
@@ -654,11 +680,10 @@ const DataTable = ({ data, onViewDetails, onExport }) => {
                 {table.getState().pagination.pageIndex + 1} sur {table.getPageCount()}
               </strong>
             </span>
-            
             <select
               value={table.getState().pagination.pageSize}
               onChange={e => table.setPageSize(Number(e.target.value))}
-              className="border border-gray-300 rounded px-2 py-1 text-sm"
+              className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-orange-400"
             >
               {[10, 20, 30, 40, 50].map(pageSize => (
                 <option key={pageSize} value={pageSize}>

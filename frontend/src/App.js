@@ -42,7 +42,7 @@ import { DataProvider, useData } from './contexts/DataContext';
 
 // Composant principal de l'application
 const AppContent = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   // État du contexte de données
   const {
@@ -79,6 +79,7 @@ const AppContent = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showSync, setShowSync] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [detailError, setDetailError] = useState(null);
   const [viewMode, setViewMode] = useState('cards'); // 'cards' ou 'table'
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' ou 'data'
   const [showAdmin, setShowAdmin] = useState(false);
@@ -171,6 +172,18 @@ const AppContent = () => {
   };
 
   const handleViewDetails = (caseId) => {
+    if (!caseId) {
+      setDetailError("Aucune décision sélectionnée.");
+      setSelectedCaseId(null);
+      return;
+    }
+    const found = allCases.find(c => c.id === caseId);
+    if (!found) {
+      setDetailError("Décision introuvable ou supprimée.");
+      setSelectedCaseId(null);
+      return;
+    }
+    setDetailError(null);
     setSelectedCaseId(caseId);
   };
 
@@ -215,7 +228,6 @@ const AppContent = () => {
                 Romulus 2
               </h1>
             </div>
-            
             {/* Navigation and Controls */}
             <div className="flex items-center space-x-4">
               {/* Navigation Buttons */}
@@ -230,7 +242,7 @@ const AppContent = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <BarChart3 className="h-4 w-4" />
-                    <span>Dashboard</span>
+                    <span>{t('dashboard', 'Dashboard')}</span>
                   </div>
                 </button>
                 <button
@@ -243,22 +255,12 @@ const AppContent = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <FileText className="h-4 w-4" />
-                    <span>Données</span>
+                    <span>{t('data', 'Données')}</span>
                   </div>
                 </button>
               </div>
 
-              {/* Bouton "Voir les données" visible uniquement sur le dashboard */}
-              {currentView === 'dashboard' && (
-                <button
-                  onClick={handleNavigateToData}
-                  className="bg-white/20 text-white px-3 py-2 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors flex items-center space-x-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Voir les données</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              )}
+
 
               {/* Indicateur de synchronisation */}
               <button
@@ -283,7 +285,8 @@ const AppContent = () => {
                 <select
                   value={i18n.language}
                   onChange={(e) => changeLanguage(e.target.value)}
-                  className="appearance-none bg-white/20 text-white rounded-lg px-3 py-2 pr-8 backdrop-blur-sm border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-white/20 text-white appearance-none pr-8 backdrop-blur-sm border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors h-[40px]"
+                  style={{ minWidth: 64 }}
                 >
                   <option value="en">EN</option>
                   <option value="fr">FR</option>
@@ -364,7 +367,7 @@ const AppContent = () => {
                   <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search decisions and orders..."
+                    placeholder={t('search.placeholder', 'Search decisions and orders...')}
                     value={activeFilters.searchTerm}
                     onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg"
@@ -382,7 +385,7 @@ const AppContent = () => {
                     ) : (
                       <Search className="h-4 w-4" />
                     )}
-                    <span>Search</span>
+                    <span>{t('search.button', 'Search')}</span>
                   </button>
                   
                   <button
@@ -393,7 +396,7 @@ const AppContent = () => {
                     }`}
                   >
                     <Filter className="h-4 w-4" />
-                    <span>Filters</span>
+                    <span>{t('filters.filters', 'Filters')}</span>
                     {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     {Object.values(activeFilters).some(v => v) && (
                       <span className="ml-1 w-2 h-2 bg-orange-500 rounded-full"></span>
@@ -777,11 +780,17 @@ const AppContent = () => {
 
       {/* Case Detail Modal */}
       <AnimatePresence>
-        {selectedCaseId && (
+        {selectedCaseId && !detailError && (
           <CaseDetail
             caseId={selectedCaseId}
             onClose={() => setSelectedCaseId(null)}
           />
+        )}
+        {detailError && (
+          <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-red-100 text-red-700 px-6 py-3 rounded-lg shadow-lg z-50">
+            {detailError}
+            <button onClick={() => setDetailError(null)} className="ml-4 text-red-900 underline">Fermer</button>
+          </div>
         )}
       </AnimatePresence>
 

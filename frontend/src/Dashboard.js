@@ -1,27 +1,24 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BarChart3, 
   TrendingUp, 
   Building2, 
   FileText, 
-  Globe,
   Download,
   Filter,
   Search,
-  Gavel,
   RefreshCw,
   Calendar,
-  Users,
-  Tag,
   Star,
-  ArrowRight,
-  ChevronRight
+  MessageSquare,
+  ChevronRight,
+  ArrowRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useData } from './contexts/DataContext';
 
-const Dashboard = ({ onNavigateToData }) => {
+const Dashboard = () => {
   const { 
     allCases, 
     stats, 
@@ -33,6 +30,13 @@ const Dashboard = ({ onNavigateToData }) => {
   } = useData();
 
   const [refreshing, setRefreshing] = useState(false);
+
+  // Charger les données si elles ne sont pas encore chargées
+  useEffect(() => {
+    if (allCases.length === 0 && !loading) {
+      fetchAllCases();
+    }
+  }, [allCases.length, loading, fetchAllCases]);
 
   // Fonction pour actualiser les données
   const handleRefresh = async () => {
@@ -223,12 +227,22 @@ const Dashboard = ({ onNavigateToData }) => {
     return { typeData, divisionData, monthData, languageData };
   }, [allCases]);
 
-  const StatCard = ({ title, value, subtitle, icon: Icon, color = 'orange', trend, onClick }) => (
+  const StatCard = ({ title, value, subtitle, icon: Icon, color = 'orange', trend, onClick }) => {
+    const colorClasses = {
+      blue: 'bg-gradient-to-r from-blue-500 to-blue-600',
+      green: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
+      purple: 'bg-gradient-to-r from-purple-500 to-purple-600',
+      orange: 'bg-gradient-to-r from-orange-500 to-orange-600',
+      red: 'bg-gradient-to-r from-red-500 to-red-600',
+      indigo: 'bg-gradient-to-r from-indigo-500 to-indigo-600'
+    };
+    
+    return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
-      className={`bg-gradient-to-r from-${color}-500 to-${color}-600 text-white rounded-xl shadow-lg p-6 cursor-pointer`}
+      className={`${colorClasses[color] || colorClasses.orange} text-white rounded-xl shadow-lg p-6 cursor-pointer`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
@@ -252,7 +266,8 @@ const Dashboard = ({ onNavigateToData }) => {
         </div>
       </div>
     </motion.div>
-  );
+    );
+  };
 
   const ChartCard = ({ title, children, className = '', action }) => (
     <motion.div
@@ -377,7 +392,6 @@ const Dashboard = ({ onNavigateToData }) => {
             </button>
             
             <button
-              onClick={onNavigateToData}
               className="romulus-btn-secondary flex items-center space-x-2"
             >
               <Search className="h-4 w-4" />
@@ -395,7 +409,6 @@ const Dashboard = ({ onNavigateToData }) => {
             subtitle="Décisions et ordonnances"
             icon={FileText}
             color="blue"
-            onClick={onNavigateToData}
           />
           <StatCard
             title="Nouveaux cas"
@@ -426,7 +439,7 @@ const Dashboard = ({ onNavigateToData }) => {
           {/* Cases by Type */}
           <ChartCard 
             title="Répartition par type de cas"
-            action={{ label: "Voir détails", onClick: onNavigateToData }}
+            action={{ label: "Voir détails", onClick: () => {} }}
           >
             <div className="space-y-4">
               {chartData.typeData.map((item, index) => (
@@ -450,7 +463,7 @@ const Dashboard = ({ onNavigateToData }) => {
           {/* Cases by Division */}
           <ChartCard 
             title="Top 5 des divisions"
-            action={{ label: "Voir toutes", onClick: onNavigateToData }}
+            action={{ label: "Voir toutes", onClick: () => {} }}
           >
             <SimpleBarChart data={chartData.divisionData} />
           </ChartCard>
@@ -466,7 +479,7 @@ const Dashboard = ({ onNavigateToData }) => {
           {/* Recent Cases */}
           <ChartCard 
             title="Cas récents"
-            action={{ label: "Voir tous", onClick: onNavigateToData }}
+            action={{ label: "Voir tous", onClick: () => {} }}
           >
             <div className="space-y-3">
               {stats.recentCases.slice(0, 4).map((case_item, index) => (
@@ -521,7 +534,7 @@ const Dashboard = ({ onNavigateToData }) => {
           <ChartCard title="Actions rapides">
             <div className="space-y-3">
               <button
-                onClick={onNavigateToData}
+
                 className="w-full flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
               >
                 <div className="flex items-center space-x-3">

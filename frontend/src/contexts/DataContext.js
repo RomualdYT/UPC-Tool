@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import cacheManager from '../utils/cacheManager';
+import lazyLoader from '../utils/lazyLoader';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
@@ -18,6 +20,11 @@ const initialState = {
   // État de chargement
   loading: false,
   syncing: false,
+  loadingProgress: {
+    loaded: 0,
+    total: 0,
+    percentage: 0
+  },
   
   // Filtres actifs
   activeFilters: {
@@ -49,7 +56,11 @@ const initialState = {
   // État de synchronisation
   lastSync: null,
   error: null,
-  notification: null
+  notification: null,
+  
+  // Cache et performance
+  cacheStats: null,
+  lastCacheUpdate: null
 };
 
 // Types d'actions
@@ -58,6 +69,7 @@ const ActionTypes = {
   SET_LOADING: 'SET_LOADING',
   SET_SYNCING: 'SET_SYNCING',
   SET_ERROR: 'SET_ERROR',
+  SET_LOADING_PROGRESS: 'SET_LOADING_PROGRESS',
   
   // Données
   SET_ALL_CASES: 'SET_ALL_CASES',
@@ -83,7 +95,10 @@ const ActionTypes = {
   CLEAR_NOTIFICATION: 'CLEAR_NOTIFICATION',
   
   // Synchronisation
-  SET_LAST_SYNC: 'SET_LAST_SYNC'
+  SET_LAST_SYNC: 'SET_LAST_SYNC',
+  
+  // Cache
+  UPDATE_CACHE_STATS: 'UPDATE_CACHE_STATS'
 };
 
 // Reducer pour gérer l'état
@@ -97,6 +112,17 @@ const dataReducer = (state, action) => {
       
     case ActionTypes.SET_ERROR:
       return { ...state, error: action.payload };
+      
+    case ActionTypes.SET_LOADING_PROGRESS:
+      return { 
+        ...state, 
+        loadingProgress: {
+          ...action.payload,
+          percentage: action.payload.total > 0 
+            ? Math.round((action.payload.loaded / action.payload.total) * 100)
+            : 0
+        }
+      };
       
     case ActionTypes.SET_ALL_CASES:
       const newStats = calculateStats(action.payload);
@@ -219,6 +245,13 @@ const dataReducer = (state, action) => {
       
     case ActionTypes.SET_LAST_SYNC:
       return { ...state, lastSync: action.payload };
+      
+    case ActionTypes.UPDATE_CACHE_STATS:
+      return { 
+        ...state, 
+        cacheStats: action.payload,
+        lastCacheUpdate: new Date().toISOString()
+      };
       
     default:
       return state;
@@ -360,20 +393,32 @@ export const DataProvider = ({ children }) => {
     fetchAllCases: useCallback(async () => {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       dispatch({ type: ActionTypes.SET_ERROR, payload: null });
-      
       try {
-        const response = await axios.get(`${BACKEND_URL}/api/cases?limit=1000`);
-        dispatch({ type: ActionTypes.SET_ALL_CASES, payload: response.data });
-        dispatch({ type: ActionTypes.SET_LAST_SYNC, payload: new Date().toISOString() });
-        
-        return { success: true, data: response.data };
+        // Utilisation du lazyLoader avec cache et progression
+        const result = await lazyLoader.loadProgressively('/api/cases', {
+          batchSize: 100,
+          useCache: true,
+          cacheTTL: 10 * 60 * 1000, // 10 min
+          onProgress: ({ loaded, total, data }) => {
+            dispatch({ type: ActionTypes.SET_LOADING_PROGRESS, payload: { loaded, total } });
+          }
+        });
+        if (result.success) {
+          dispatch({ type: ActionTypes.SET_ALL_CASES, payload: result.data });
+          dispatch({ type: ActionTypes.SET_LAST_SYNC, payload: new Date().toISOString() });
+          dispatch({ type: ActionTypes.UPDATE_CACHE_STATS, payload: cacheManager.getStats() });
+          return { success: true, data: result.data };
+        } else {
+          dispatch({ type: ActionTypes.SET_ERROR, payload: result.error });
+          return { success: false, error: result.error };
+        }
       } catch (error) {
         const errorMsg = error.response?.data?.detail || 'Erreur lors du chargement des données';
         dispatch({ type: ActionTypes.SET_ERROR, payload: errorMsg });
-        console.error('Error fetching all cases:', error);
         return { success: false, error: errorMsg };
       } finally {
         dispatch({ type: ActionTypes.SET_LOADING, payload: false });
+        dispatch({ type: ActionTypes.SET_LOADING_PROGRESS, payload: { loaded: 0, total: 0 } });
       }
     }, []),
     

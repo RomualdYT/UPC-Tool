@@ -11,6 +11,14 @@ from enum import Enum
 import asyncio
 import threading
 
+# Import the scraper at module level
+try:
+    from .upc_scraper import UPCScraper
+    SCRAPER_AVAILABLE = True
+except ImportError:
+    SCRAPER_AVAILABLE = False
+    print("Warning: UPCScraper not available")
+
 # MongoDB connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
 client = MongoClient(MONGO_URL)
@@ -65,8 +73,8 @@ class CaseModel(BaseModel):
     id: str
     date: str
     type: CaseType
-    reference: str
     registry_number: str
+    order_reference: str
     case_number: Optional[str] = None
     court_division: str
     type_of_action: ActionType
@@ -242,7 +250,26 @@ async def get_filters():
 async def sync_upc_data(background_tasks: BackgroundTasks):
     """Sync data with UPC website - scrapes all available pages"""
     try:
-        # Just return success for now
+        # Check if scraper is available
+        if not SCRAPER_AVAILABLE:
+            raise HTTPException(status_code=500, detail="UPC Scraper not available")
+        
+        # Initialize scraper with MongoDB connection
+        mongodb_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
+        scraper = UPCScraper(mongodb_url)
+        
+        # Start scraping in background
+        def run_scraper():
+            try:
+                print("Starting UPC scraper...")
+                count = scraper.update_database()
+                print(f"Scraping completed. {count} decisions processed.")
+            except Exception as e:
+                print(f"Error during scraping: {e}")
+        
+        # Add the scraping task to background tasks
+        background_tasks.add_task(run_scraper)
+        
         return {"message": "UPC data sync started - will scrape all available pages"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -298,9 +325,9 @@ async def startup_event():
                 "_id": str(uuid.uuid4()),
                 "date": "2025-01-08",
                 "type": "Order",
-                "reference": "ORD_32533/2025",
                 "registry_number": "App_31860/2025",
-                "court_division": "Milano (IT)",
+                "order_reference": "ORD_32533/2025",
+                "court_division": "Court of First Instance - Milan (IT) Local Division",
                 "type_of_action": "Generic application",
                 "language_of_proceedings": "EN",
                 "parties": ["Progress Maschinen & Automation AG", "AWM s.r.l.", "Schnell s.p.a."],
@@ -321,9 +348,9 @@ async def startup_event():
                 "_id": str(uuid.uuid4()),
                 "date": "2025-01-03",
                 "type": "Order",
-                "reference": "ORD_29288/2025",
                 "registry_number": "App_28457/2025",
-                "court_division": "München (DE)",
+                "order_reference": "ORD_29288/2025",
+                "court_division": "Court of First Instance - Munich (DE) Local Division",
                 "type_of_action": "Generic application",
                 "language_of_proceedings": "DE",
                 "parties": ["Renault Deutschland AG", "Renault Retail Group Deutschland GmbH"],

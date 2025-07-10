@@ -93,30 +93,44 @@ class UPCScraper:
     def _extract_decision_data(self, element) -> Optional[Dict]:
         """Extract decision data from an HTML element"""
         try:
-            # Extract text content
+            # Extract text content and clean it
             text = element.get_text(strip=True)
+            
+            # Skip if text is too short or contains obvious HTML artifacts
+            if len(text) < 50 or any(artifact in text.lower() for artifact in [
+                'show search filters', 'registry number', 'order/decision reference',
+                'type- any -', 'party name', 'courtshow all', 'court of appeal',
+                'central divisions', 'local divisions', 'regional divisions'
+            ]):
+                return None
+            
+            # Extract the "Full Details" link to get detailed information
+            detail_link = self._extract_detail_link(element)
+            detailed_info = {}
+            if detail_link:
+                detailed_info = self._scrape_detail_page(detail_link)
             
             # Basic patterns for common data
             decision_data = {
                 'id': str(uuid.uuid4()),
                 'date': self._extract_date(text),
                 'type': self._extract_type(text),
-                'reference': self._extract_reference(text),
                 'registry_number': self._extract_registry_number(text),
+                'order_reference': self._extract_order_reference(text),
                 'case_number': None,
-                'court_division': self._extract_court_division(text),
+                'court_division': detailed_info.get('court_division') or self._extract_court_division(text),
                 'type_of_action': self._extract_action_type(text),
                 'language_of_proceedings': self._extract_language(text),
-                'parties': self._extract_parties(text),
+                'parties': detailed_info.get('parties') or self._extract_parties(text),
                 'patent': self._extract_patent(text),
                 'legal_norms': self._extract_legal_norms(text),
                 'tags': self._extract_tags(text),
-                'summary': self._extract_summary(text),
+                'summary': detailed_info.get('summary') or self._extract_summary(text),
                 'documents': self._extract_documents(element)
             }
             
-            # Only return if we have essential data
-            if decision_data['reference'] or decision_data['registry_number']:
+            # Only return if we have essential data and it looks like a real decision
+            if (decision_data['registry_number'] or decision_data['order_reference']) and decision_data['date']:
                 return decision_data
             
         except Exception as e:
@@ -197,7 +211,7 @@ class UPCScraper:
             if match:
                 return match.group(1)
         
-        return f"REF_{uuid.uuid4().hex[:8]}"
+        return ""  # Return empty string instead of generating fake reference
     
     def _extract_registry_number(self, text: str) -> str:
         """Extract registry number"""
@@ -211,7 +225,22 @@ class UPCScraper:
             if match:
                 return match.group(1)
         
-        return f"APP_{uuid.uuid4().hex[:8]}"
+        return ""  # Return empty string instead of generating fake reference
+    
+    def _extract_order_reference(self, text: str) -> str:
+        """Extract order reference number"""
+        patterns = [
+            r'(ORD_\d+/\d+)',  # ORD_32533/2025
+            r'(DEC_\d+/\d+)',  # DEC_12345/2025
+            r'(UPC_\w+_\d+)',  # UPC_CFI_123
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.I)
+            if match:
+                return match.group(1)
+        
+        return ""  # Return empty string instead of generating fake reference
     
     def _extract_court_division(self, text: str) -> str:
         """Extract court division"""
@@ -313,6 +342,136 @@ class UPCScraper:
             summary += "..."
         
         return summary
+    
+    def _extract_detail_link(self, element) -> Optional[str]:
+        """Extract the 'Full Details' link from a decision element"""
+        try:
+            # Look for links containing 'node' in the URL
+            links = element.find_all('a', href=True)
+            for link in links:
+                href = link['href']
+                if 'node' in href and '/en/node/' in href:
+                    return urljoin(self.base_url, href)
+        except Exception as e:
+            logger.debug(f"Error extracting detail link: {e}")
+        
+        return None
+    
+    def _scrape_detail_page(self, url: str) -> Dict:
+        """Scrape detailed information from a decision's detail page"""
+        try:
+            response = self.session.get(url, timeout=30)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            detailed_info = {}
+            
+            # Extract court division from detail page
+            court_division = self._extract_court_division_from_detail(soup)
+            if court_division:
+                detailed_info['court_division'] = court_division
+            
+            # Extract parties from detail page
+            parties = self._extract_parties_from_detail(soup)
+            if parties:
+                detailed_info['parties'] = parties
+            
+            # Extract summary from detail page
+            summary = self._extract_summary_from_detail(soup)
+            if summary:
+                detailed_info['summary'] = summary
+            
+            return detailed_info
+            
+        except Exception as e:
+            logger.warning(f"Error scraping detail page {url}: {e}")
+            return {}
+    
+    def _extract_court_division_from_detail(self, soup) -> Optional[str]:
+        """Extract court division from detail page"""
+        try:
+            # Look for "Court - Division" pattern
+            text = soup.get_text()
+            
+            # Pattern for "Court of Appeal - Luxembourg (LU)" or similar
+            patterns = [
+                r'Court of Appeal\s*-\s*([^,\n]+)',
+                r'Court of First Instance\s*-\s*([^,\n]+)',
+                r'Central Division\s*-\s*([^,\n]+)',
+                r'Local Division\s*-\s*([^,\n]+)',
+                r'Regional Division\s*-\s*([^,\n]+)',
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, text, re.I)
+                if match:
+                    division = match.group(1).strip()
+                    # Reconstruct the full court division
+                    if 'Court of Appeal' in pattern:
+                        return f"Court of Appeal - {division}"
+                    elif 'Court of First Instance' in pattern:
+                        return f"Court of First Instance - {division}"
+                    elif 'Central Division' in pattern:
+                        return f"Central Division - {division}"
+                    elif 'Local Division' in pattern:
+                        return f"Local Division - {division}"
+                    elif 'Regional Division' in pattern:
+                        return f"Regional Division - {division}"
+            
+        except Exception as e:
+            logger.debug(f"Error extracting court division from detail: {e}")
+        
+        return None
+    
+    def _extract_parties_from_detail(self, soup) -> List[str]:
+        """Extract parties from detail page"""
+        try:
+            # Look for party information in the detail page
+            text = soup.get_text()
+            
+            # Enhanced party extraction patterns
+            patterns = [
+                r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:AG|GmbH|Ltd|Inc|Corp|SA|SRL|s\.r\.l\.|s\.p\.a\.))',
+                r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Limited|Corporation|Company))',
+                r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:v\.|versus)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
+            ]
+            
+            parties = []
+            for pattern in patterns:
+                matches = re.findall(pattern, text)
+                parties.extend(matches)
+            
+            # Remove duplicates and return
+            return list(set(parties))[:5]  # Limit to 5 parties
+            
+        except Exception as e:
+            logger.debug(f"Error extracting parties from detail: {e}")
+        
+        return []
+    
+    def _extract_summary_from_detail(self, soup) -> Optional[str]:
+        """Extract summary from detail page"""
+        try:
+            # Look for summary content in the detail page
+            # This might be in specific divs or sections
+            summary_selectors = [
+                '.field--name-field-summary',
+                '.field--name-body',
+                '.content',
+                'p',
+            ]
+            
+            for selector in summary_selectors:
+                elements = soup.select(selector)
+                for element in elements:
+                    text = element.get_text(strip=True)
+                    if len(text) > 100:  # Reasonable summary length
+                        return text[:1000]  # Limit to 1000 characters
+            
+        except Exception as e:
+            logger.debug(f"Error extracting summary from detail: {e}")
+        
+        return None
     
     def _extract_documents(self, element) -> List[Dict]:
         """Extract document links"""
