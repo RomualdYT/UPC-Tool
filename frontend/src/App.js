@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -19,12 +19,19 @@ import {
   ExternalLink,
   Settings,
   Database,
-  Flame
+  Flame,
+  Table,
+  BarChart3,
+  ArrowLeft
 } from 'lucide-react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import UPCSync from './UPCSync';
 import CaseDetail from './CaseDetail';
+import DataTable from './DataTable';
+import Dashboard from './Dashboard';
+import { exportData, exportStats } from './ExportUtils';
+import Notification from './Notification';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
@@ -51,12 +58,79 @@ function App() {
     caseTypes: [],
     tags: []
   });
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' ou 'table'
+  const [allCases, setAllCases] = useState([]); // Toutes les données pour le tableau
+  const [filteredCases, setFilteredCases] = useState([]); // Données filtrées pour le tableau
+  const [notification, setNotification] = useState(null); // Notification système
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' ou 'data'
 
   const itemsPerPage = 20;
+
+  // Fonction pour filtrer les données localement
+  const filterCases = useCallback((cases, searchTerm, filters) => {
+    return cases.filter(case_item => {
+      // Filtre de recherche
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const searchableFields = [
+          case_item.reference,
+          case_item.summary,
+          case_item.type,
+          case_item.court_division,
+          case_item.registry_number,
+          case_item.language_of_proceedings,
+          case_item.type_of_action,
+          Array.isArray(case_item.parties) ? case_item.parties.join(' ') : case_item.parties,
+          Array.isArray(case_item.tags) ? case_item.tags.join(' ') : case_item.tags
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        if (!searchableFields.includes(searchLower)) {
+          return false;
+        }
+      }
+
+      // Filtres par date
+      if (filters.dateFrom) {
+        const caseDate = new Date(case_item.date);
+        const fromDate = new Date(filters.dateFrom);
+        if (caseDate < fromDate) return false;
+      }
+
+      if (filters.dateTo) {
+        const caseDate = new Date(case_item.date);
+        const toDate = new Date(filters.dateTo);
+        if (caseDate > toDate) return false;
+      }
+
+      // Filtre par type de cas
+      if (filters.caseType && case_item.type !== filters.caseType) {
+        return false;
+      }
+
+      // Filtre par division
+      if (filters.courtDivision && case_item.court_division !== filters.courtDivision) {
+        return false;
+      }
+
+      // Filtre par langue
+      if (filters.language && case_item.language_of_proceedings !== filters.language) {
+        return false;
+      }
+
+      return true;
+    });
+  }, []);
+
+  // Effet pour mettre à jour les données filtrées
+  useEffect(() => {
+    const filtered = filterCases(allCases, searchTerm, filters);
+    setFilteredCases(filtered);
+  }, [allCases, searchTerm, filters, filterCases]);
 
   useEffect(() => {
     fetchCases();
     fetchAvailableFilters();
+    fetchAllCases(); // Récupérer toutes les données pour le tableau
   }, [currentPage, searchTerm, filters]);
 
   const fetchCases = async () => {
@@ -83,6 +157,56 @@ function App() {
       console.error('Error fetching cases:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fonction pour récupérer toutes les données (pour le tableau)
+  const fetchAllCases = async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/cases?limit=1000`);
+      setAllCases(response.data);
+      // Initialiser les données filtrées avec toutes les données
+      setFilteredCases(response.data);
+    } catch (error) {
+      console.error('Error fetching all cases:', error);
+    }
+  };
+
+  // Fonction d'export
+  const handleExport = (data) => {
+    const result = exportData(data, 'excel', 'decisions_upc');
+    if (result.success) {
+      setNotification({
+        message: `Export réussi: ${result.filename}`,
+        type: 'success',
+        duration: 4000
+      });
+    } else {
+      setNotification({
+        message: `Erreur d'export: ${result.error}`,
+        type: 'error',
+        duration: 5000
+      });
+    }
+  };
+
+  // Fonction d'export des statistiques
+  const handleExportStats = () => {
+    const dataToExport = viewMode === 'table' ? filteredCases : allCases;
+    const filename = viewMode === 'table' ? 'statistiques_upc_filtrees' : 'statistiques_upc';
+    const result = exportStats(dataToExport, filename);
+    if (result.success) {
+      setNotification({
+        message: `Export des statistiques réussi: ${result.filename}`,
+        type: 'success',
+        duration: 4000
+      });
+    } else {
+      setNotification({
+        message: `Erreur d'export: ${result.error}`,
+        type: 'error',
+        duration: 5000
+      });
     }
   };
 
@@ -117,7 +241,37 @@ function App() {
       courtDivision: '',
       language: ''
     });
+    setSearchTerm('');
     setCurrentPage(1);
+  };
+
+  // Fonction pour changer de vue avec synchronisation
+  const handleViewModeChange = (newMode) => {
+    setViewMode(newMode);
+    // Réinitialiser la page quand on change de vue
+    setCurrentPage(1);
+    
+    // Afficher une notification si des filtres sont actifs
+    if (newMode === 'table' && (searchTerm || Object.values(filters).some(v => v))) {
+      setNotification({
+        message: `Vue tableau avec ${totalFilteredCount} résultats filtrés sur ${totalCount} total`,
+        type: 'info',
+        duration: 3000
+      });
+    }
+  };
+
+  const handleNavigateToData = () => {
+    setCurrentView('data');
+  };
+
+  const handleNavigateToDashboard = () => {
+    setCurrentView('dashboard');
+  };
+
+  // Fonction pour fermer la notification
+  const closeNotification = () => {
+    setNotification(null);
   };
 
   const changeLanguage = (lng) => {
@@ -143,7 +297,10 @@ function App() {
     setSelectedCaseId(caseId);
   };
 
+  // Calculer le nombre total de pages et le nombre total d'éléments selon la vue
   const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const totalFilteredCount = filteredCases.length;
+  const displayCount = viewMode === 'table' ? totalFilteredCount : totalCount;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
@@ -165,8 +322,38 @@ function App() {
               </h1>
             </div>
             
-            {/* Language Selector */}
+            {/* Navigation and Controls */}
             <div className="flex items-center space-x-4">
+              {/* Navigation Buttons */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleNavigateToDashboard}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentView === 'dashboard' 
+                      ? 'bg-white/30 text-white' 
+                      : 'bg-white/20 text-white/80 hover:bg-white/30'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </div>
+                </button>
+                <button
+                  onClick={handleNavigateToData}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentView === 'data' 
+                      ? 'bg-white/30 text-white' 
+                      : 'bg-white/20 text-white/80 hover:bg-white/30'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Données</span>
+                  </div>
+                </button>
+              </div>
+
               <button
                 onClick={() => setShowSync(!showSync)}
                 className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
@@ -193,35 +380,55 @@ function App() {
       </motion.header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-4xl font-bold text-gray-900 mb-4 font-display">
-            UPC Decisions and Orders
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Instantly search and analyze Unified Patent Court decisions and orders
-          </p>
-        </motion.div>
-
-        {/* UPC Sync Section */}
-        <AnimatePresence>
-          {showSync && (
+      <AnimatePresence mode="wait">
+        {currentView === 'dashboard' ? (
+          <Dashboard onNavigateToData={handleNavigateToData} />
+        ) : (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Back to Dashboard Button */}
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3 }}
+              className="mb-6"
             >
-              <UPCSync />
+              <button
+                onClick={handleNavigateToDashboard}
+                className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Retour au tableau de bord</span>
+              </button>
             </motion.div>
-          )}
-        </AnimatePresence>
+
+            {/* Hero Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 font-display">
+                UPC Decisions and Orders
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Instantly search and analyze Unified Patent Court decisions and orders
+              </p>
+            </motion.div>
+
+            {/* UPC Sync Section */}
+            <AnimatePresence>
+              {showSync && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <UPCSync />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
         {/* Search Section */}
         <motion.div
@@ -259,11 +466,16 @@ function App() {
               <button
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
-                className="romulus-btn-secondary flex items-center space-x-2"
+                className={`romulus-btn-secondary flex items-center space-x-2 ${
+                  (searchTerm || Object.values(filters).some(v => v)) ? 'ring-2 ring-orange-500' : ''
+                }`}
               >
                 <Filter className="h-4 w-4" />
                 <span>Filters</span>
                 {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {(searchTerm || Object.values(filters).some(v => v)) && (
+                  <span className="ml-1 w-2 h-2 bg-orange-500 rounded-full"></span>
+                )}
               </button>
             </div>
           </form>
@@ -278,6 +490,25 @@ function App() {
                 transition={{ duration: 0.3 }}
                 className="mt-6 pt-6 border-t border-orange-200"
               >
+                {/* Indicateur de filtres actifs */}
+                {(searchTerm || Object.values(filters).some(v => v)) && (
+                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Filter className="h-4 w-4 text-orange-600" />
+                        <span className="text-sm font-medium text-orange-800">
+                          Filtres actifs
+                        </span>
+                      </div>
+                      <button
+                        onClick={clearFilters}
+                        className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                      >
+                        Effacer tous les filtres
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -370,32 +601,81 @@ function App() {
           className="romulus-card"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-orange-600" />
-              <span>Cases Found: {totalCount}</span>
-            </h3>
-            
-            {totalPages > 1 && (
+            <div className="flex items-center space-x-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-orange-600" />
+                <span>
+                  {viewMode === 'table' ? 'Cases Found' : 'Cases Found'}: {displayCount}
+                  {viewMode === 'table' && totalFilteredCount !== totalCount && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      (filtré sur {totalCount} total)
+                    </span>
+                  )}
+                </span>
+              </h3>
+              
+              {/* Boutons de changement de vue */}
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="romulus-btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                  onClick={() => handleViewModeChange('cards')}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    viewMode === 'cards' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
                 >
-                  Previous
+                  <div className="flex items-center space-x-1">
+                    <FileText className="h-4 w-4" />
+                    <span>Cartes</span>
+                  </div>
                 </button>
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="romulus-btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                  onClick={() => handleViewModeChange('table')}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    viewMode === 'table' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
                 >
-                  Next
+                  <div className="flex items-center space-x-1">
+                    <Table className="h-4 w-4" />
+                    <span>Tableau</span>
+                  </div>
                 </button>
               </div>
-            )}
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {viewMode === 'cards' && totalPages > 1 && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="romulus-btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="romulus-btn-secondary px-3 py-1 text-sm disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+              
+              <button
+                onClick={handleExportStats}
+                className="romulus-btn-secondary flex items-center space-x-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Stats</span>
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -406,6 +686,12 @@ function App() {
                 <div></div>
               </div>
             </div>
+          ) : viewMode === 'table' ? (
+            <DataTable 
+              data={filteredCases} 
+              onViewDetails={handleViewDetails}
+              onExport={handleExport}
+            />
           ) : (
             <div className="space-y-4">
               {cases.map((case_item, index) => (
@@ -507,6 +793,8 @@ function App() {
           )}
         </motion.div>
       </main>
+        )}
+      </AnimatePresence>
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8 mt-16">
@@ -529,6 +817,18 @@ function App() {
           <CaseDetail
             caseId={selectedCaseId}
             onClose={() => setSelectedCaseId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Notification System */}
+      <AnimatePresence>
+        {notification && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            duration={notification.duration}
+            onClose={closeNotification}
           />
         )}
       </AnimatePresence>
