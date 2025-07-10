@@ -14,7 +14,7 @@ import threading
 
 # Import the scraper at module level
 try:
-    from .upc_scraper import UPCScraper
+    from upc_scraper import UPCScraper
     SCRAPER_AVAILABLE = True
 except ImportError:
     SCRAPER_AVAILABLE = False
