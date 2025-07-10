@@ -94,53 +94,7 @@ class UPCScraper:
             logger.error(f"Error scraping decisions page {page}: {e}")
             return []
     
-    def _extract_decision_data(self, element) -> Optional[Dict]:
-        """Extract decision data from an HTML element"""
-        try:
-            # Extract text content and clean it
-            text = element.get_text(strip=True)
-            
-            # Skip if text is too short or contains obvious HTML artifacts
-            if len(text) < 50 or any(artifact in text.lower() for artifact in [
-                'show search filters', 'registry number', 'order/decision reference',
-                'type- any -', 'party name', 'courtshow all', 'court of appeal',
-                'central divisions', 'local divisions', 'regional divisions'
-            ]):
-                return None
-            
-            # Extract the "Full Details" link to get detailed information
-            detail_link = self._extract_detail_link(element)
-            detailed_info = {}
-            if detail_link:
-                detailed_info = self._scrape_detail_page(detail_link)
-            
-            # Basic patterns for common data
-            decision_data = {
-                'id': str(uuid.uuid4()),
-                'date': self._extract_date(text),
-                'type': self._extract_type(text),
-                'registry_number': self._extract_registry_number(text),
-                'order_reference': self._extract_order_reference(text),
-                'case_number': None,
-                'court_division': detailed_info.get('court_division') or self._extract_court_division(text),
-                'type_of_action': self._extract_action_type(text),
-                'language_of_proceedings': self._extract_language(text),
-                'parties': detailed_info.get('parties') or self._extract_parties(text),
-                'patent': self._extract_patent(text),
-                'legal_norms': self._extract_legal_norms(text),
-                'tags': self._extract_tags(text),
-                'summary': detailed_info.get('summary') or self._extract_summary(text),
-                'documents': self._extract_documents(element)
-            }
-            
-            # Only return if we have essential data and it looks like a real decision
-            if (decision_data['registry_number'] or decision_data['order_reference']) and decision_data['date']:
-                return decision_data
-            
-        except Exception as e:
-            logger.warning(f"Error extracting decision data: {e}")
-        
-        return None
+
     
     def _extract_date(self, text: str) -> str:
         """Extract date from text"""
