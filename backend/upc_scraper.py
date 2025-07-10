@@ -49,36 +49,40 @@ class UPCScraper:
             soup = BeautifulSoup(response.content, 'html.parser')
             decisions = []
 
-            # The decisions are listed in a table with 50 rows per page
-            decision_elements = soup.select('table.views-table tbody tr')
+            # Find the decisions table - it's a simple table without specific class
+            table = soup.find('table')
+            if not table:
+                logger.warning(f"No table found on page {page}")
+                return []
 
-            if not decision_elements:
-                # Fallback to previous generic selectors
-                decision_elements = soup.find_all(['div', 'tr'], class_=re.compile(r'decision|case|order', re.I))
-
-            if not decision_elements:
-                decision_elements = soup.find_all(['div', 'article', 'section'],
-                                                attrs={'class': re.compile(r'result|item|entry', re.I)})
+            # Get all table rows from tbody, skip the header row
+            tbody = table.find('tbody')
+            if tbody:
+                decision_rows = tbody.find_all('tr')
+            else:
+                # Fallback if no tbody
+                decision_rows = table.find_all('tr')[1:]  # Skip header row
+            
+            logger.info(f"Found {len(decision_rows)} table rows on page {page}")
             
             # Keep track of unique references to avoid duplicates within the same page
             seen_references = set()
             
-            for element in decision_elements:
+            for row in decision_rows:
                 try:
-                    decision_data = self._extract_decision_data(element)
-                    if decision_data and decision_data.get('reference'):
-                        # Check if we've already seen this reference on this page
-                        ref = decision_data['reference']
+                    decision_data = self._extract_decision_from_row(row)
+                    if decision_data and decision_data.get('registry_number'):
+                        # Use registry_number as unique identifier
+                        ref = decision_data['registry_number']
                         if ref not in seen_references:
                             seen_references.add(ref)
                             decisions.append(decision_data)
                         else:
                             logger.debug(f"Skipping duplicate reference {ref} on page {page}")
                 except Exception as e:
-                    logger.warning(f"Error parsing decision element: {e}")
+                    logger.warning(f"Error parsing decision row: {e}")
                     continue
             
-            # Additional validation: if we get very few unique decisions, it might be end of content
             if len(decisions) > 0:
                 logger.info(f"Scraped {len(decisions)} unique decisions from page {page}")
             else:
