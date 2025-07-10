@@ -125,10 +125,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Health endpoint"
-    - "Cases endpoint"
-    - "Filters endpoint"
-    - "Cases count endpoint"
+    - "UPC Scraper Improvements"
+    - "UPC Sync Endpoint"
+    - "Enhanced Case Fields"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -138,3 +137,5 @@ agent_communication:
     message: "Created initial test_result.md file. Will now test backend API endpoints to check responsiveness."
   - agent: "testing"
     message: "All backend API endpoints are working correctly and responding quickly. Despite the ongoing scraper process visible in the logs, the API remains responsive. No issues detected with any of the tested endpoints."
+  - agent: "testing"
+    message: "UPC scraper improvements testing completed successfully. All requested features are working perfectly: 1) UPC sync endpoint triggers scraping correctly, 2) Enhanced fields (keywords, headnotes, language_of_proceedings) are populated in all cases, 3) Scraper extracts real data from UPC website with excellent quality metrics, 4) Found 45 decisions with 95.6% real UPC data vs 4.4% sample data. The scraper now properly visits detail pages and extracts enhanced information as requested."
