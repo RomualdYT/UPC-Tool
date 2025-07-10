@@ -55,7 +55,7 @@ class UPCLegalAPITester(unittest.TestCase):
             # Verify case structure if we have cases
             if cases:
                 case = cases[0]
-                required_fields = ["id", "date", "type", "reference", "registry_number", 
+                required_fields = ["id", "date", "type", "order_reference", "registry_number", 
                                 "court_division", "type_of_action", "language_of_proceedings", 
                                 "parties", "summary"]
                 for field in required_fields:
