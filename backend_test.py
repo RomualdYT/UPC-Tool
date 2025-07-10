@@ -451,12 +451,16 @@ def run_tests():
     # Create a test suite
     suite = unittest.TestSuite()
     
-    # Add test methods - focusing on the required endpoints
+    # Add test methods - focusing on UPC scraper improvements
     test_cases = [
         'test_01_health_check',
         'test_02_get_cases',
+        'test_04_get_cases_count',
         'test_05_get_filters',
-        'test_04_get_cases_count'
+        'test_09_upc_sync_endpoint',
+        'test_10_enhanced_case_fields',
+        'test_11_scraper_data_quality',
+        'test_12_scraper_real_data_extraction'
     ]
     
     # Track results for each test
