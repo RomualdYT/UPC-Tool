@@ -180,35 +180,43 @@ class UPCScraper:
             return None
 
     
-    def _extract_date(self, text: str) -> str:
-        """Extract date from text"""
-        # Look for date patterns
-        date_patterns = [
-            r'(\d{1,2}\s+\w+\s+\d{4})',  # "8 July 2025"
-            r'(\d{1,2}/\d{1,2}/\d{4})',  # "08/07/2025"
-            r'(\d{4}-\d{2}-\d{2})',      # "2025-07-08"
-        ]
-        
-        for pattern in date_patterns:
-            match = re.search(pattern, text, re.I)
-            if match:
+    def _parse_date_from_text(self, date_text: str) -> str:
+        """Parse date from text like '10 July 2025'"""
+        try:
+            # Remove any extra whitespace
+            date_text = date_text.strip()
+            
+            # Handle format like "10 July 2025"
+            if re.match(r'\d{1,2}\s+\w+\s+\d{4}', date_text):
                 try:
-                    date_str = match.group(1)
-                    # Try to parse and format consistently
-                    if '/' in date_str:
-                        parsed_date = datetime.strptime(date_str, '%m/%d/%Y')
-                    elif '-' in date_str:
-                        parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
-                    else:
-                        # Try to parse natural language date
-                        parsed_date = self._parse_natural_date(date_str)
-                    
-                    if parsed_date:
+                    parsed_date = datetime.strptime(date_text, '%d %B %Y')
+                    return parsed_date.strftime('%Y-%m-%d')
+                except ValueError:
+                    # Try different format
+                    try:
+                        parsed_date = datetime.strptime(date_text, '%d %b %Y')
                         return parsed_date.strftime('%Y-%m-%d')
-                except:
+                    except ValueError:
+                        pass
+            
+            # Handle format like "2025-07-10"
+            if re.match(r'\d{4}-\d{2}-\d{2}', date_text):
+                return date_text
+            
+            # Handle format like "10/07/2025"
+            if re.match(r'\d{1,2}/\d{1,2}/\d{4}', date_text):
+                try:
+                    parsed_date = datetime.strptime(date_text, '%d/%m/%Y')
+                    return parsed_date.strftime('%Y-%m-%d')
+                except ValueError:
                     pass
-        
-        return datetime.now().strftime('%Y-%m-%d')
+            
+            logger.warning(f"Could not parse date: {date_text}")
+            return datetime.now().strftime('%Y-%m-%d')
+            
+        except Exception as e:
+            logger.warning(f"Error parsing date '{date_text}': {e}")
+            return datetime.now().strftime('%Y-%m-%d')
     
     def _parse_natural_date(self, date_str: str) -> Optional[datetime]:
         """Parse natural language dates like '8 July 2025'"""
