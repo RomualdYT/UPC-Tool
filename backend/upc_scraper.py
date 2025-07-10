@@ -254,8 +254,11 @@ class UPCScraper:
         try:
             parties = []
             
-            # Split on common separators
-            if ' v. ' in parties_text:
+            # Handle the case where there's no space before v.
+            if 'v.' in parties_text:
+                # Add space before v. if missing
+                parties_text = re.sub(r'([a-zA-Z])v\.', r'\1 v.', parties_text)
+                
                 parts = parties_text.split(' v. ')
                 for part in parts:
                     # Split on line breaks for multiple parties on same side
