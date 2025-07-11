@@ -866,11 +866,22 @@ const AppContent = () => {
 
       {/* Admin Panel */}
       <AnimatePresence>
-        {showAdmin && (
+        {showAdmin && isAdmin() && (
           <AdminPanel 
             onClose={() => setShowAdmin(false)} 
             cases={allCases}
             onCaseUpdate={updateCase}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Authentication Modal */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <AuthModal
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            initialMode={authMode}
           />
         )}
       </AnimatePresence>
