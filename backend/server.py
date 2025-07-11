@@ -662,6 +662,274 @@ async def get_excluded_cases(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Pending changes endpoints (for editor workflow)
+@app.post("/api/editor/changes/submit")
+async def submit_change(
+    case_id: str,
+    case_update: CaseUpdateModel,
+    reason: Optional[str] = None,
+    current_user: UserInDB = Depends(get_editor_or_admin_user)
+):
+    """Submit a change for approval (editors) or apply directly (admins)"""
+    try:
+        # Check if case exists
+        case = cases_collection.find_one({"_id": case_id})
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        # If user is admin, apply changes directly
+        if current_user.role == "admin":
+            update_data = {}
+            if case_update.admin_summary is not None:
+                update_data["admin_summary"] = case_update.admin_summary
+            if case_update.apports is not None:
+                update_data["apports"] = [apport.dict() for apport in case_update.apports]
+            if case_update.excluded is not None:
+                update_data["excluded"] = case_update.excluded
+            if case_update.exclusion_reason is not None:
+                update_data["exclusion_reason"] = case_update.exclusion_reason
+            
+            # Update the case
+            result = cases_collection.update_one(
+                {"_id": case_id},
+                {"$set": update_data}
+            )
+            
+            if result.modified_count == 0:
+                raise HTTPException(status_code=400, detail="No changes made")
+            
+            # Return updated case
+            updated_case = cases_collection.find_one({"_id": case_id})
+            updated_case["id"] = str(updated_case.pop("_id"))
+            return updated_case
+        
+        # If user is editor, submit for approval
+        else:
+            change_id = str(uuid.uuid4())
+            pending_change = {
+                "_id": change_id,
+                "case_id": case_id,
+                "user_id": current_user.id,
+                "user_name": current_user.username,
+                "change_type": "case_update",
+                "original_data": {
+                    "admin_summary": case.get("admin_summary"),
+                    "apports": case.get("apports", []),
+                    "excluded": case.get("excluded", False),
+                    "exclusion_reason": case.get("exclusion_reason")
+                },
+                "new_data": case_update.dict(),
+                "reason": reason,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "reviewed_at": None,
+                "reviewed_by": None
+            }
+            
+            pending_changes_collection.insert_one(pending_change)
+            
+            return {
+                "message": "Change submitted for approval",
+                "change_id": change_id
+            }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/pending-changes")
+async def get_pending_changes(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get all pending changes (admin only)"""
+    try:
+        query = {"status": "pending"}
+        cursor = pending_changes_collection.find(query).skip(skip).limit(limit).sort("created_at", -1)
+        changes = []
+        for change in cursor:
+            change["id"] = str(change.pop("_id"))
+            changes.append(change)
+        return changes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/pending-changes/{change_id}/approve")
+async def approve_change(
+    change_id: str,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Approve a pending change (admin only)"""
+    try:
+        # Get the pending change
+        change = pending_changes_collection.find_one({"_id": change_id})
+        if not change:
+            raise HTTPException(status_code=404, detail="Change not found")
+        
+        if change["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Change already processed")
+        
+        # Apply the change to the case
+        case_id = change["case_id"]
+        new_data = change["new_data"]
+        
+        update_data = {}
+        if new_data.get("admin_summary") is not None:
+            update_data["admin_summary"] = new_data["admin_summary"]
+        if new_data.get("apports") is not None:
+            update_data["apports"] = new_data["apports"]
+        if new_data.get("excluded") is not None:
+            update_data["excluded"] = new_data["excluded"]
+        if new_data.get("exclusion_reason") is not None:
+            update_data["exclusion_reason"] = new_data["exclusion_reason"]
+        
+        # Update the case
+        result = cases_collection.update_one(
+            {"_id": case_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Failed to update case")
+        
+        # Update the pending change status
+        pending_changes_collection.update_one(
+            {"_id": change_id},
+            {"$set": {
+                "status": "approved",
+                "reviewed_at": datetime.utcnow(),
+                "reviewed_by": current_user.id
+            }}
+        )
+        
+        return {"message": "Change approved and applied"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/pending-changes/{change_id}/reject")
+async def reject_change(
+    change_id: str,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Reject a pending change (admin only)"""
+    try:
+        # Get the pending change
+        change = pending_changes_collection.find_one({"_id": change_id})
+        if not change:
+            raise HTTPException(status_code=404, detail="Change not found")
+        
+        if change["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Change already processed")
+        
+        # Update the pending change status
+        pending_changes_collection.update_one(
+            {"_id": change_id},
+            {"$set": {
+                "status": "rejected",
+                "reviewed_at": datetime.utcnow(),
+                "reviewed_by": current_user.id
+            }}
+        )
+        
+        return {"message": "Change rejected"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Newsletter endpoints
+@app.get("/api/admin/newsletter/subscribers")
+async def get_newsletter_subscribers(
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get newsletter subscribers (admin only)"""
+    try:
+        # Get users who opted in for newsletter
+        users = users_collection.find({"newsletter_opt_in": True})
+        subscribers = []
+        for user in users:
+            subscribers.append({
+                "id": str(user["_id"]),
+                "email": user["email"],
+                "username": user["username"],
+                "profile": user.get("profile"),
+                "created_at": user["created_at"]
+            })
+        return subscribers
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/admin/newsletter/send")
+async def send_newsletter(
+    newsletter_data: Dict[str, Any],
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Send newsletter to subscribers (admin only)"""
+    try:
+        # This is a placeholder - you would integrate with actual email service
+        # For now, just store the newsletter in the database
+        newsletter_id = str(uuid.uuid4())
+        newsletter = {
+            "_id": newsletter_id,
+            "subject": newsletter_data.get("subject", ""),
+            "content": newsletter_data.get("content", ""),
+            "recipients": newsletter_data.get("recipients", []),
+            "created_at": datetime.utcnow(),
+            "sent_at": datetime.utcnow(),
+            "status": "sent",
+            "created_by": current_user.id
+        }
+        
+        newsletter_collection.insert_one(newsletter)
+        
+        return {
+            "message": "Newsletter sent successfully",
+            "newsletter_id": newsletter_id,
+            "recipients_count": len(newsletter_data.get("recipients", []))
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Settings endpoints
+@app.get("/api/admin/settings")
+async def get_settings(
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get system settings (admin only)"""
+    try:
+        settings = settings_collection.find({})
+        settings_dict = {}
+        for setting in settings:
+            settings_dict[setting["key"]] = setting["value"]
+        return settings_dict
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/settings/{key}")
+async def update_setting(
+    key: str,
+    value: Dict[str, Any],
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Update a system setting (admin only)"""
+    try:
+        setting = {
+            "key": key,
+            "value": value,
+            "updated_at": datetime.utcnow(),
+            "updated_by": current_user.id
+        }
+        
+        result = settings_collection.update_one(
+            {"key": key},
+            {"$set": setting},
+            upsert=True
+        )
+        
+        return {"message": f"Setting '{key}' updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/filters")
 async def get_filters():
     """Get available filter options"""
