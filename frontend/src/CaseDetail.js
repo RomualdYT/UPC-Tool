@@ -52,15 +52,12 @@ const CaseDetail = ({ caseId, onClose }) => {
     }
   }, [fetchCaseDetails]);
 
-  const fetchPdfDocument = async () => {
-    try {
-      setPdfLoading(true);
-      const response = await axios.get(`${BACKEND_URL}/api/cases/${caseId}/pdf`);
-      setPdfUrl(response.data.pdf_url);
-    } catch (error) {
-      console.error('Error fetching PDF:', error);
-    } finally {
-      setPdfLoading(false);
+  const fetchPdfDocument = () => {
+    if (caseData?.documents?.length > 0) {
+      setPdfUrl(caseData.documents[0].url);
+    } else {
+      console.error('No documents available');
+      // Optionally show a notification
     }
   };
 
@@ -295,7 +292,7 @@ const CaseDetail = ({ caseId, onClose }) => {
                     <div className="mb-6">
                       <h4 className="text-md font-medium text-gray-900 mb-2 flex items-center space-x-2">
                         <MessageSquare className="h-4 w-4 text-blue-600" />
-                        <span>Résumé administratif</span>
+                        <span>Résumé par Casalonga</span>
                       </h4>
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-gray-700 leading-relaxed">{caseData.admin_summary}</p>
