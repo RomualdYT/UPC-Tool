@@ -154,10 +154,12 @@ const AppContent = () => {
 
   const handleNavigateToData = () => {
     setCurrentView('data');
+    generateSearchSEO(activeFilters.searchTerm || 'all cases', filteredCases.length);
   };
 
   const handleNavigateToDashboard = () => {
     setCurrentView('dashboard');
+    generateDashboardSEO(stats);
   };
 
   const changeLanguage = (lng) => {
