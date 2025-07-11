@@ -20,6 +20,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useData } from './contexts/DataContext';
+import { useTranslation } from 'react-i18next';
 import UserManagement from './components/admin/UserManagement';
 import UPCTextManager from './components/admin/UPCTextManager';
 import FooterManager from './components/admin/FooterManager';
@@ -28,6 +29,7 @@ import CaseExclusions from './components/admin/CaseExclusions';
 import AdminCasesManager from './components/admin/AdminCasesManager';
 
 const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const { allCases, loading } = useData();
 
@@ -53,21 +55,21 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
   };
 
   const tabs = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3, color: 'purple' },
-    { id: 'users', label: 'Utilisateurs', icon: Users, color: 'blue' },
-    { id: 'cases', label: 'Gestion des commentaires et apports juridiques', icon: MessageSquare, color: 'orange' },
-    { id: 'exclusions', label: 'Exclusions', icon: FileText, color: 'red' },
-    { id: 'upc-texts', label: 'Code UPC', icon: BookOpen, color: 'green' },
-    { id: 'sync', label: 'Synchronisation', icon: Database, color: 'indigo' },
-    { id: 'footer', label: 'Footer', icon: Layout, color: 'pink' }
+    { id: 'dashboard', label: t('admin.dashboard'), icon: BarChart3, color: 'purple' },
+    { id: 'users', label: t('admin.users'), icon: Users, color: 'blue' },
+    { id: 'cases', label: t('admin.cases'), icon: MessageSquare, color: 'orange' },
+    { id: 'exclusions', label: t('admin.exclusions'), icon: FileText, color: 'red' },
+    { id: 'upc-texts', label: t('navigation.upcCode'), icon: BookOpen, color: 'green' },
+    { id: 'sync', label: t('admin.sync'), icon: Database, color: 'indigo' },
+    { id: 'footer', label: t('admin.footer'), icon: Layout, color: 'pink' }
   ];
 
   const DashboardContent = () => (
     <div className="space-y-6">
       {/* Titre */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord administrateur</h1>
-        <p className="text-gray-600">Vue d'ensemble de la gestion du système UPC Legal</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('admin.dashboard')}</h1>
+        <p className="text-gray-600">{t('admin.overview')}</p>
       </div>
 
       {/* Statistiques principales */}
@@ -80,7 +82,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total des cas</p>
+              <p className="text-sm font-medium text-gray-600">{t('admin.totalCases')}</p>
               <p className="text-3xl font-bold text-gray-900">{adminStats.total}</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-full">
@@ -90,7 +92,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
           <div className="mt-4">
             <div className="flex items-center text-sm text-gray-500">
               <Activity className="h-4 w-4 mr-1" />
-              <span>Système actif</span>
+              <span>{t('admin.activeSystem')}</span>
             </div>
           </div>
         </motion.div>
@@ -103,7 +105,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cas commentés</p>
+              <p className="text-sm font-medium text-gray-600">{t('admin.commentedCases')}</p>
               <p className="text-3xl font-bold text-blue-600">{adminStats.commented}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
@@ -113,7 +115,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
           <div className="mt-4">
             <div className="flex items-center text-sm text-green-600">
               <TrendingUp className="h-4 w-4 mr-1" />
-              <span>Résumés ajoutés</span>
+              <span>{t('admin.summariesAdded')}</span>
             </div>
           </div>
         </motion.div>
@@ -126,7 +128,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cas importants</p>
+              <p className="text-sm font-medium text-gray-600">{t('admin.importantCases')}</p>
               <p className="text-3xl font-bold text-red-600">{adminStats.important}</p>
             </div>
             <div className="p-3 bg-red-100 rounded-full">
@@ -136,7 +138,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
           <div className="mt-4">
             <div className="flex items-center text-sm text-red-600">
               <Shield className="h-4 w-4 mr-1" />
-              <span>Apports juridiques</span>
+              <span>{t('admin.legalContributions')}</span>
             </div>
           </div>
         </motion.div>
@@ -149,7 +151,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Taux de complétion</p>
+              <p className="text-sm font-medium text-gray-600">{t('admin.completionRate')}</p>
               <p className="text-3xl font-bold text-green-600">{adminStats.completion}%</p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
@@ -176,12 +178,12 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
           transition={{ delay: 0.5 }}
           className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Répartition des cas</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.caseDistribution')}</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Cas commentés</span>
+                <span className="text-sm text-gray-600">{t('admin.commented')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-900">{adminStats.commented}</span>
@@ -191,7 +193,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Cas importants</span>
+                <span className="text-sm text-gray-600">{t('admin.important')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-900">{adminStats.important}</span>
@@ -201,7 +203,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-                <span className="text-sm text-gray-600">À traiter</span>
+                <span className="text-sm text-gray-600">{t('admin.toProcess')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-900">{adminStats.none}</span>
@@ -211,7 +213,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Cas exclus</span>
+                <span className="text-sm text-gray-600">{t('admin.excluded')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-gray-900">{adminStats.excluded}</span>
@@ -228,7 +230,7 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
           transition={{ delay: 0.6 }}
           className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.quickActions')}</h3>
           <div className="space-y-3">
             <button
               onClick={() => setActiveTab('cases')}
@@ -236,8 +238,8 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
             >
               <MessageSquare className="h-5 w-5 text-orange-600" />
               <div className="flex-1 text-left">
-                <p className="font-medium text-orange-900">Gérer les commentaires</p>
-                <p className="text-sm text-orange-600">Ajouter des résumés et apports</p>
+                <p className="font-medium text-orange-900">{t('admin.manageComments')}</p>
+                <p className="text-sm text-orange-600">{t('admin.addSummaries')}</p>
               </div>
             </button>
             <button
@@ -246,8 +248,8 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
             >
               <Users className="h-5 w-5 text-blue-600" />
               <div className="flex-1 text-left">
-                <p className="font-medium text-blue-900">Gérer les utilisateurs</p>
-                <p className="text-sm text-blue-600">Ajouter, modifier ou supprimer</p>
+                <p className="font-medium text-blue-900">{t('admin.manageUsers')}</p>
+                <p className="text-sm text-blue-600">{t('admin.addModifyDelete')}</p>
               </div>
             </button>
             <button
@@ -256,8 +258,8 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
             >
               <Database className="h-5 w-5 text-indigo-600" />
               <div className="flex-1 text-left">
-                <p className="font-medium text-indigo-900">Synchroniser les données</p>
-                <p className="text-sm text-indigo-600">Mettre à jour depuis UPC</p>
+                <p className="font-medium text-indigo-900">{t('admin.syncData')}</p>
+                <p className="text-sm text-indigo-600">{t('admin.updateFromUPC')}</p>
               </div>
             </button>
           </div>
@@ -271,15 +273,15 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
         transition={{ delay: 0.7 }}
         className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
       >
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Statut du système</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.systemStatus')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 rounded-full">
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="font-medium text-gray-900">API Backend</p>
-              <p className="text-sm text-green-600">Opérationnel</p>
+              <p className="font-medium text-gray-900">{t('admin.apiBackend')}</p>
+              <p className="text-sm text-green-600">{t('admin.operational')}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -287,8 +289,8 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="font-medium text-gray-900">Base de données</p>
-              <p className="text-sm text-green-600">Connectée</p>
+              <p className="font-medium text-gray-900">{t('admin.database')}</p>
+              <p className="text-sm text-green-600">{t('admin.connected')}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -296,8 +298,8 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
               <Clock className="h-5 w-5 text-yellow-600" />
             </div>
             <div>
-              <p className="font-medium text-gray-900">Dernière sync</p>
-              <p className="text-sm text-yellow-600">Il y a 2h</p>
+              <p className="font-medium text-gray-900">{t('admin.lastSync')}</p>
+              <p className="text-sm text-yellow-600">{t('admin.hoursAgo')}</p>
             </div>
           </div>
         </div>
@@ -342,21 +344,21 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
                 className="flex items-center space-x-2 text-white hover:text-purple-200 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" />
-                <span className="font-medium">Retour</span>
+                <span className="font-medium">{t('admin.return')}</span>
               </button>
               <div className="h-6 w-px bg-purple-400"></div>
               <div className="flex items-center space-x-3">
                 <Settings className="h-6 w-6 text-white" />
                 <div>
-                  <h1 className="text-xl font-semibold text-white">Administration UPC</h1>
-                  <p className="text-purple-200 text-sm">Gestion complète du système</p>
+                  <h1 className="text-xl font-semibold text-white">{t('admin.upcAdministration')}</h1>
+                  <p className="text-purple-200 text-sm">{t('admin.completeSystemManagement')}</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm text-purple-200">Administrateur</p>
-                <p className="text-xs text-purple-300">Accès complet</p>
+                <p className="text-sm text-purple-200">{t('admin.administrator')}</p>
+                <p className="text-xs text-purple-300">{t('admin.fullAccess')}</p>
               </div>
               <div className="h-8 w-8 bg-white/20 rounded-full flex items-center justify-center">
                 <Shield className="h-4 w-4 text-white" />

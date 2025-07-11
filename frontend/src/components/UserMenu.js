@@ -50,7 +50,7 @@ const UserMenu = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-3 p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors text-white"
+        className="flex items-center space-x-3 px-3 py-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors text-white h-[40px]"
       >
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-white/30 rounded-full flex items-center justify-center">

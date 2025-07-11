@@ -49,7 +49,18 @@ const Notification = ({ message, type = 'info', onClose, duration = 5000 }) => {
       <div className="flex items-start space-x-3">
         {getIcon()}
         <div className="flex-1">
-          <p className="text-sm font-medium">{message}</p>
+          <p className="text-sm font-medium">
+            {typeof message === 'string' ? message :
+              message && message.msg ? message.msg :
+              message && message.detail && Array.isArray(message.detail) ? (
+                message.detail.map((err, idx) => (
+                  <span key={idx}>{err.msg || JSON.stringify(err)}</span>
+                ))
+              ) :
+              message && message.detail && typeof message.detail === 'string' ? message.detail :
+              message ? JSON.stringify(message) : null
+            }
+          </p>
         </div>
         {onClose && (
           <button

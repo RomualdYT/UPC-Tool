@@ -5,7 +5,6 @@ import {
   TrendingUp, 
   Building2, 
   FileText, 
-  Download,
   Filter,
   Search,
   RefreshCw,
@@ -13,19 +12,21 @@ import {
   Star,
   MessageSquare,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Book
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useData } from './contexts/DataContext';
+import { useTranslation } from 'react-i18next';
 
-const Dashboard = () => {
+const Dashboard = ({ onNavigateToData, onNavigateToUPCCode }) => {
+  const { t } = useTranslation();
   const { 
     allCases, 
     stats, 
     loading, 
     syncing,
     fetchAllCases,
-    syncUPCData,
     setNotification 
   } = useData();
 
@@ -44,13 +45,13 @@ const Dashboard = () => {
     try {
       await fetchAllCases();
       setNotification({
-        message: 'Données actualisées',
+        message: t('notifications.dataUpdated'),
         type: 'success',
         duration: 3000
       });
     } catch (error) {
       setNotification({
-        message: 'Erreur lors de l\'actualisation',
+        message: t('notifications.updateError'),
         type: 'error',
         duration: 4000
       });
@@ -59,23 +60,7 @@ const Dashboard = () => {
     }
   };
 
-  // Fonction pour synchroniser avec UPC
-  const handleSync = async () => {
-    const result = await syncUPCData();
-    if (result.success) {
-      setNotification({
-        message: 'Synchronisation UPC démarrée',
-        type: 'success',
-        duration: 4000
-      });
-    } else {
-      setNotification({
-        message: `Erreur de synchronisation: ${result.error}`,
-        type: 'error',
-        duration: 5000
-      });
-    }
-  };
+
 
   // Calculs avancés pour les statistiques temps réel
   const advancedStats = useMemo(() => {
@@ -365,10 +350,10 @@ const Dashboard = () => {
           className="text-center mb-8"
         >
           <h2 className="text-4xl font-bold text-gray-900 mb-4 font-display">
-            Tableau de bord UPC
+            {t('dashboard.title')}
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-            Analysez les tendances et statistiques des décisions de la Cour unifiée des brevets en temps réel
+            {t('dashboard.subtitle')}
           </p>
           
           {/* Actions rapides */}
@@ -379,23 +364,26 @@ const Dashboard = () => {
               className="romulus-btn-secondary flex items-center space-x-2"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>Actualiser</span>
+              <span>{t('dashboard.refresh')}</span>
             </button>
             
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="romulus-btn-primary flex items-center space-x-2"
-            >
-              <Download className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              <span>Synchroniser UPC</span>
-            </button>
+
             
             <button
+              onClick={onNavigateToData}
               className="romulus-btn-secondary flex items-center space-x-2"
             >
               <Search className="h-4 w-4" />
-              <span>Explorer les données</span>
+              <span>{t('dashboard.exploreData')}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            
+            <button
+              onClick={onNavigateToUPCCode}
+              className="romulus-btn-primary flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <Book className="h-4 w-4" />
+              <span>{t('dashboard.upcCode')}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -404,31 +392,31 @@ const Dashboard = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
-            title="Total des cas"
+            title={t('dashboard.totalCases')}
             value={advancedStats.totalCases.toLocaleString()}
-            subtitle="Décisions et ordonnances"
+            subtitle={t('dashboard.decisionsAndOrders')}
             icon={FileText}
             color="blue"
           />
           <StatCard
-            title="Nouveaux cas"
+            title={t('dashboard.newCases')}
             value={advancedStats.recentGrowth}
-            subtitle="30 derniers jours"
+            subtitle={t('dashboard.last30Days')}
             icon={TrendingUp}
             color="green"
             trend={advancedStats.recentGrowth}
           />
           <StatCard
-            title="Division active"
+            title={t('dashboard.activeDivision')}
             value={advancedStats.mostActiveDivision.split('(')[0].trim()}
-            subtitle="Plus d'activité"
+            subtitle={t('dashboard.mostActivity')}
             icon={Building2}
             color="purple"
           />
           <StatCard
-            title="Moyenne mensuelle"
+            title={t('dashboard.monthlyAverage')}
             value={advancedStats.averageCasesPerMonth}
-            subtitle="Cas par mois"
+            subtitle={t('dashboard.casesPerMonth')}
             icon={Calendar}
             color="orange"
           />
@@ -438,8 +426,8 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Cases by Type */}
           <ChartCard 
-            title="Répartition par type de cas"
-            action={{ label: "Voir détails", onClick: () => {} }}
+            title={t('dashboard.caseTypeDistribution')}
+            action={{ label: t('dashboard.viewDetails'), onClick: () => {} }}
           >
             <div className="space-y-4">
               {chartData.typeData.map((item, index) => (
@@ -462,8 +450,8 @@ const Dashboard = () => {
 
           {/* Cases by Division */}
           <ChartCard 
-            title="Top 5 des divisions"
-            action={{ label: "Voir toutes", onClick: () => {} }}
+            title={t('dashboard.topDivisions')}
+            action={{ label: t('dashboard.viewAll'), onClick: () => {} }}
           >
             <SimpleBarChart data={chartData.divisionData} />
           </ChartCard>
@@ -472,14 +460,14 @@ const Dashboard = () => {
         {/* Timeline and Recent Cases */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Timeline Chart */}
-          <ChartCard title="Évolution des 6 derniers mois">
+          <ChartCard title={t('dashboard.evolution6Months')}>
             <SimpleBarChart data={chartData.monthData} height={300} />
           </ChartCard>
 
           {/* Recent Cases */}
           <ChartCard 
-            title="Cas récents"
-            action={{ label: "Voir tous", onClick: () => {} }}
+            title={t('dashboard.recentCases')}
+            action={{ label: t('dashboard.viewAllCases'), onClick: () => {} }}
           >
             <div className="space-y-3">
               {stats.recentCases.slice(0, 4).map((case_item, index) => (
@@ -491,33 +479,33 @@ const Dashboard = () => {
 
         {/* Advanced Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <ChartCard title="Statistiques avancées">
+          <ChartCard title={t('dashboard.advancedStats')}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 flex items-center space-x-2">
                   <MessageSquare className="h-4 w-4" />
-                  <span>Cas commentés</span>
+                  <span>{t('dashboard.commentedCases')}</span>
                 </span>
                 <span className="font-bold text-blue-600">{advancedStats.commentedCases}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 flex items-center space-x-2">
                   <Star className="h-4 w-4" />
-                  <span>Cas importants</span>
+                  <span>{t('dashboard.importantCases')}</span>
                 </span>
                 <span className="font-bold text-red-600">{advancedStats.importantCases}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 flex items-center space-x-2">
                   <FileText className="h-4 w-4" />
-                  <span>Taux de complétion</span>
+                  <span>{t('dashboard.completionRate')}</span>
                 </span>
                 <span className="font-bold text-green-600">{advancedStats.completionRate}%</span>
               </div>
             </div>
           </ChartCard>
 
-          <ChartCard title="Répartition par langue">
+          <ChartCard title={t('dashboard.languageDistribution')}>
             <div className="space-y-3">
               {chartData.languageData.slice(0, 4).map((item, index) => (
                 <div key={index} className="flex items-center justify-between">
@@ -531,7 +519,7 @@ const Dashboard = () => {
             </div>
           </ChartCard>
 
-          <ChartCard title="Actions rapides">
+          <ChartCard title={t('dashboard.quickActions')}>
             <div className="space-y-3">
               <button
 
@@ -539,29 +527,17 @@ const Dashboard = () => {
               >
                 <div className="flex items-center space-x-3">
                   <Search className="h-5 w-5 text-orange-600" />
-                  <span className="font-medium text-orange-800">Rechercher des cas</span>
+                  <span className="font-medium text-orange-800">{t('dashboard.searchCases')}</span>
                 </div>
                 <ArrowRight className="h-4 w-4 text-orange-600" />
               </button>
               
-              <button 
-                onClick={handleSync}
-                disabled={syncing}
-                className="w-full flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
-              >
-                <div className="flex items-center space-x-3">
-                  <Download className={`h-5 w-5 text-blue-600 ${syncing ? 'animate-spin' : ''}`} />
-                  <span className="font-medium text-blue-800">
-                    {syncing ? 'Synchronisation...' : 'Synchroniser UPC'}
-                  </span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-blue-600" />
-              </button>
+
               
               <button className="w-full flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors">
                 <div className="flex items-center space-x-3">
                   <BarChart3 className="h-5 w-5 text-green-600" />
-                  <span className="font-medium text-green-800">Exporter les stats</span>
+                  <span className="font-medium text-green-800">{t('dashboard.exportStats')}</span>
                 </div>
                 <ArrowRight className="h-4 w-4 text-green-600" />
               </button>
@@ -581,16 +557,16 @@ const Dashboard = () => {
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${syncing ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`} />
                 <span className="text-sm font-medium text-gray-700">
-                  {syncing ? 'Synchronisation en cours...' : 'Système opérationnel'}
+                  {syncing ? t('dashboard.syncingInProgress') : t('dashboard.systemOperational')}
                 </span>
               </div>
               <div className="text-sm text-gray-500">
-                Dernière mise à jour: {format(new Date(), 'dd/MM/yyyy HH:mm')}
+                {t('dashboard.lastUpdate')}: {format(new Date(), 'dd/MM/yyyy HH:mm')}
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                {allCases.length} décisions chargées
+                {allCases.length} {t('dashboard.decisionsLoaded')}
               </span>
               <button
                 onClick={handleRefresh}

@@ -29,7 +29,6 @@ import {
 import { format } from 'date-fns';
 
 // Imports des composants
-import UPCSync from './UPCSync';
 import CaseDetail from './CaseDetail';
 import DataTable from './DataTable';
 import Dashboard from './Dashboard';
@@ -46,7 +45,7 @@ import Footer from './components/Footer';
 import UserMenu from './components/UserMenu';
 
 // Composant principal de l'application
-const AppContent = () => {
+const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
   const { t, i18n } = useTranslation();
   const { user, isAuthenticated, isAdmin, canEdit } = useAuth();
   
@@ -83,12 +82,10 @@ const AppContent = () => {
 
   // État local pour l'interface
   const [showFilters, setShowFilters] = useState(false);
-  const [showSync, setShowSync] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [detailError, setDetailError] = useState(null);
   const [viewMode, setViewMode] = useState('cards'); // 'cards' ou 'table'
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'data', ou 'upc-code'
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' ou 'data'
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
 
@@ -97,13 +94,13 @@ const AppContent = () => {
     const result = exportData(data, 'excel', 'decisions_upc');
     if (result.success) {
       setNotification({
-        message: `Export réussi: ${result.filename}`,
+        message: `${t('notifications.exportSuccess')}: ${result.filename}`,
         type: 'success',
         duration: 4000
       });
     } else {
       setNotification({
-        message: `Erreur d'export: ${result.error}`,
+        message: `${t('notifications.exportError')}: ${result.error}`,
         type: 'error',
         duration: 5000
       });
@@ -117,13 +114,13 @@ const AppContent = () => {
     const result = exportStats(dataToExport, filename);
     if (result.success) {
       setNotification({
-        message: `Export des statistiques réussi: ${result.filename}`,
+        message: `${t('notifications.exportSuccess')}: ${result.filename}`,
         type: 'success',
         duration: 4000
       });
     } else {
       setNotification({
-        message: `Erreur d'export: ${result.error}`,
+        message: `${t('notifications.exportError')}: ${result.error}`,
         type: 'error',
         duration: 5000
       });
@@ -146,7 +143,7 @@ const AppContent = () => {
     updatePage(1);
     
     setNotification({
-      message: `Vue ${newMode === 'table' ? 'tableau' : 'cartes'} avec ${filteredCases.length} décisions`,
+      message: `${t('notifications.viewTable')} ${newMode === 'table' ? t('notifications.viewTable') : t('notifications.viewCards')} avec ${filteredCases.length} ${t('notifications.decisions')}`,
       type: 'info',
       duration: 3000
     });
@@ -161,7 +158,7 @@ const AppContent = () => {
   };
 
   const handleNavigateToUPCCode = () => {
-    setCurrentView('upc-code');
+    onShowUPCCode();
   };
 
   const changeLanguage = (lng) => {
@@ -199,23 +196,7 @@ const AppContent = () => {
     setSelectedCaseId(caseId);
   };
 
-  // Fonction pour gérer la synchronisation UPC
-  const handleUPCSync = async () => {
-    const result = await syncUPCData();
-    if (result.success) {
-      setNotification({
-        message: 'Synchronisation UPC démarrée',
-        type: 'success',
-        duration: 4000
-      });
-    } else {
-      setNotification({
-        message: `Erreur de synchronisation: ${result.error}`,
-        type: 'error',
-        duration: 5000
-      });
-    }
-  };
+
 
   // Calculer les données paginées pour la vue cartes
   const paginatedCases = getPaginatedCases();
@@ -254,7 +235,7 @@ const AppContent = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <BarChart3 className="h-4 w-4" />
-                    <span>{t('dashboard', 'Dashboard')}</span>
+                    <span>{t('navigation.dashboard')}</span>
                   </div>
                 </button>
                 <button
@@ -267,7 +248,7 @@ const AppContent = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <FileText className="h-4 w-4" />
-                    <span>{t('data', 'Données')}</span>
+                    <span>{t('navigation.data')}</span>
                   </div>
                 </button>
                 <button
@@ -280,28 +261,19 @@ const AppContent = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <Scale className="h-4 w-4" />
-                    <span>Code UPC</span>
+                    <span>{t('navigation.upcCode')}</span>
                   </div>
                 </button>
               </div>
 
 
 
-              {/* Indicateur de synchronisation */}
-              <button
-                onClick={() => setShowSync(!showSync)}
-                className={`p-2 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors ${
-                  syncing ? 'bg-white/30 animate-pulse' : 'bg-white/20'
-                }`}
-                title="UPC Data Sync"
-              >
-                <Database className={`h-5 w-5 text-white ${syncing ? 'animate-spin' : ''}`} />
-              </button>
+
 
               {/* Admin Button - only show if user is admin */}
               {isAdmin() && (
                 <button
-                  onClick={() => setShowAdmin(true)}
+                  onClick={onShowAdmin}
                   className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
                   title="Administration"
                 >
@@ -321,7 +293,7 @@ const AppContent = () => {
                     }}
                     className="px-3 py-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors text-white text-sm font-medium"
                   >
-                    Connexion
+                    {t('auth.login')}
                   </button>
                   <button
                     onClick={() => {
@@ -330,7 +302,7 @@ const AppContent = () => {
                     }}
                     className="px-3 py-2 bg-white/30 rounded-lg backdrop-blur-sm hover:bg-white/40 transition-colors text-white text-sm font-medium"
                   >
-                    S'inscrire
+                    {t('auth.register')}
                   </button>
                 </div>
               )}
@@ -361,11 +333,7 @@ const AppContent = () => {
             stats={stats}
             loading={loading || allCases.length === 0}
             onNavigateToData={handleNavigateToData}
-          />
-        ) : currentView === 'upc-code' ? (
-          <UPCCode 
-            onBack={handleNavigateToDashboard}
-            onViewCaseDetail={handleViewDetails}
+            onNavigateToUPCCode={handleNavigateToUPCCode}
           />
         ) : (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -381,7 +349,7 @@ const AppContent = () => {
                 className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-medium"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>Retour au tableau de bord</span>
+                <span>{t('navigation.backToDashboard')}</span>
               </button>
             </motion.div>
 
@@ -400,19 +368,7 @@ const AppContent = () => {
               </p>
             </motion.div>
 
-            {/* UPC Sync Section */}
-            <AnimatePresence>
-              {showSync && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <UPCSync onSync={handleUPCSync} syncing={syncing} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+
 
             {/* Search Section */}
             <motion.div
@@ -853,17 +809,6 @@ const AppContent = () => {
         )}
       </AnimatePresence>
 
-      {/* Admin Fullscreen */}
-      <AnimatePresence>
-        {showAdmin && isAdmin() && (
-          <AdminFullscreen 
-            onClose={() => setShowAdmin(false)} 
-            cases={allCases}
-            onCaseUpdate={updateCase}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Authentication Modal */}
       <AnimatePresence>
         {showAuthModal && (
@@ -883,10 +828,43 @@ function App() {
   return (
     <AuthProvider>
       <DataProvider>
-        <AppContent />
+        <AppWrapper />
       </DataProvider>
     </AuthProvider>
   );
 }
+
+// Wrapper pour gérer l'administration et le Code UPC
+const AppWrapper = () => {
+  const { isAdmin } = useAuth();
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [showUPCCode, setShowUPCCode] = useState(false);
+  const { allCases, updateCase } = useData();
+
+  return (
+    <>
+      {showAdmin && isAdmin() ? (
+        <AdminFullscreen 
+          onClose={() => setShowAdmin(false)} 
+          cases={allCases}
+          onCaseUpdate={updateCase}
+        />
+      ) : showUPCCode ? (
+        <UPCCode 
+          onBack={() => setShowUPCCode(false)}
+          onViewCaseDetail={(caseId) => {
+            // Handle case detail view
+            console.log('Open case detail:', caseId);
+          }}
+        />
+      ) : (
+        <AppContent 
+          onShowAdmin={() => setShowAdmin(true)}
+          onShowUPCCode={() => setShowUPCCode(true)}
+        />
+      )}
+    </>
+  );
+};
 
 export default App;
