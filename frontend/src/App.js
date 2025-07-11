@@ -784,7 +784,6 @@ const AppContent = () => {
             </motion.div>
           </main>
         )}
-      </AnimatePresence>
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8 mt-16">
