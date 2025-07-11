@@ -34,6 +34,7 @@ client = MongoClient(MONGO_URL)
 db = client['upc_legal']
 cases_collection = db['cases']
 documents_collection = db['documents']
+upc_texts_collection = db['upc_texts']  # New collection for UPC legal texts
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
