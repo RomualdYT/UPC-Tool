@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -24,7 +25,8 @@ import {
   ArrowRight,
   Shield,
   Star,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -40,14 +42,26 @@ import Notification from './Notification';
 // Import du contexte de données
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SEOProvider, useSEO } from './contexts/SEOContext';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import UserMenu from './components/UserMenu';
+
+// Nouveaux composants SEO, GDPR et Newsletter
+import MetaTags from './components/seo/MetaTags';
+import Breadcrumb from './components/seo/Breadcrumb';
+import { generateWebSiteStructuredData } from './components/seo/StructuredData';
+import GDPRBanner from './components/gdpr/GDPRBanner';
+import PrivacySettings from './components/gdpr/PrivacySettings';
+import NewsletterSignup from './components/newsletter/NewsletterSignup';
+import NewsletterManagement from './components/admin/NewsletterManagement';
+import PermissionsManagement from './components/admin/PermissionsManagement';
 
 // Composant principal de l'application
 const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
   const { t, i18n } = useTranslation();
   const { user, isAuthenticated, isAdmin, canEdit } = useAuth();
+  const { updatePageSEO, getPageSEO } = useSEO();
   
   // État du contexte de données
   const {
@@ -88,6 +102,28 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' ou 'data'
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+
+  // SEO dynamique basé sur la vue
+  useEffect(() => {
+    const currentPageSEO = getPageSEO();
+    
+    // Mettre à jour les métadonnées SEO selon la vue
+    if (currentView === 'dashboard') {
+      updatePageSEO({
+        title: 'Tableau de bord UPC Legal - Statistiques et analyses',
+        description: 'Découvrez les statistiques complètes des décisions UPC, analyses par juridiction et tendances temporelles.',
+        keywords: [...(currentPageSEO.keywords || []), 'tableau de bord', 'statistiques', 'analyse'],
+        structuredData: generateWebSiteStructuredData()
+      });
+    } else if (currentView === 'data') {
+      updatePageSEO({
+        title: `Recherche UPC - ${filteredCases.length} décisions trouvées`,
+        description: `Explorez ${filteredCases.length} décisions et ordonnances de la Cour Unifiée du Brevet avec nos filtres avancés.`,
+        keywords: [...(currentPageSEO.keywords || []), 'recherche', 'décisions', 'filtres'],
+        structuredData: generateWebSiteStructuredData()
+      });
+    }
+  }, [currentView, filteredCases.length, updatePageSEO, getPageSEO]);
 
   // Fonction d'export avec notification intégrée
   const handleExport = (data) => {
@@ -196,14 +232,18 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
     setSelectedCaseId(caseId);
   };
 
-
-
   // Calculer les données paginées pour la vue cartes
   const paginatedCases = getPaginatedCases();
   const totalPages = Math.ceil(filteredCases.length / pagination.itemsPerPage);
 
+  // Obtenir les métadonnées SEO pour la page actuelle
+  const currentSEO = getPageSEO();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+      {/* SEO Meta Tags */}
+      <MetaTags {...currentSEO} />
+
       {/* Header */}
       <motion.header 
         initial={{ y: -50, opacity: 0 }}
@@ -218,7 +258,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                 <Flame className="h-6 w-6 text-white" />
               </div>
               <h1 className="text-xl font-bold text-white font-display">
-                Romulus 2
+                UPC Legal
               </h1>
             </div>
             {/* Navigation and Controls */}
@@ -265,10 +305,6 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                   </div>
                 </button>
               </div>
-
-
-
-
 
               {/* Admin Button - only show if user is admin */}
               {isAdmin() && (
@@ -325,6 +361,9 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
         </div>
       </motion.header>
 
+      {/* Breadcrumb (seulement pour les pages de données) */}
+      {currentView !== 'dashboard' && <Breadcrumb />}
+
       {/* Main Content */}
       <AnimatePresence mode="wait">
         {currentView === 'dashboard' ? (
@@ -361,14 +400,39 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
               className="text-center mb-12"
             >
               <h2 className="text-4xl font-bold text-gray-900 mb-4 font-display">
-                UPC Decisions and Orders
+                Décisions et Ordonnances UPC
               </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Instantly search and analyze Unified Patent Court decisions and orders
+                Recherchez et analysez instantanément les décisions et ordonnances de la Cour Unifiée du Brevet
               </p>
             </motion.div>
 
-
+            {/* Newsletter Signup */}
+            {!isAuthenticated() && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="mb-8"
+              >
+                <NewsletterSignup 
+                  onSuccess={() => {
+                    setNotification({
+                      message: 'Inscription réussie ! Merci de votre intérêt.',
+                      type: 'success',
+                      duration: 4000
+                    });
+                  }}
+                  onError={(error) => {
+                    setNotification({
+                      message: 'Erreur lors de l\'inscription à la newsletter.',
+                      type: 'error',
+                      duration: 4000
+                    });
+                  }}
+                />
+              </motion.div>
+            )}
 
             {/* Search Section */}
             <motion.div
@@ -382,7 +446,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                   <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder={t('search.placeholder', 'Search decisions and orders...')}
+                    placeholder={t('search.placeholder', 'Rechercher dans les décisions et ordonnances...')}
                     value={activeFilters.searchTerm}
                     onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg"
@@ -400,7 +464,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                     ) : (
                       <Search className="h-4 w-4" />
                     )}
-                    <span>{t('search.button', 'Search')}</span>
+                    <span>{t('search.button', 'Rechercher')}</span>
                   </button>
                   
                   <button
@@ -411,7 +475,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                     }`}
                   >
                     <Filter className="h-4 w-4" />
-                    <span>{t('filters.filters', 'Filters')}</span>
+                    <span>{t('filters.filters', 'Filtres')}</span>
                     {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     {Object.values(activeFilters).some(v => v) && (
                       <span className="ml-1 w-2 h-2 bg-orange-500 rounded-full"></span>
@@ -452,7 +516,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Date Range
+                          Période
                         </label>
                         <div className="flex space-x-2">
                           <input
@@ -472,14 +536,14 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Case Type
+                          Type de cas
                         </label>
                         <select
                           value={activeFilters.caseType}
                           onChange={(e) => handleFilterChange('caseType', e.target.value)}
                           className="input-field w-full border-orange-300 focus:ring-orange-500"
                         >
-                          <option value="">All Types</option>
+                          <option value="">Tous les types</option>
                           {(availableFilters.caseTypes || []).map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
@@ -488,14 +552,14 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Court Division
+                          Division
                         </label>
                         <select
                           value={activeFilters.courtDivision}
                           onChange={(e) => handleFilterChange('courtDivision', e.target.value)}
                           className="input-field w-full border-orange-300 focus:ring-orange-500"
                         >
-                          <option value="">All Divisions</option>
+                          <option value="">Toutes les divisions</option>
                           {(availableFilters.courtDivisions || []).map(division => (
                             <option key={division} value={division}>{division}</option>
                           ))}
@@ -504,14 +568,14 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Language
+                          Langue
                         </label>
                         <select
                           value={activeFilters.language}
                           onChange={(e) => handleFilterChange('language', e.target.value)}
                           className="input-field w-full border-orange-300 focus:ring-orange-500"
                         >
-                          <option value="">All Languages</option>
+                          <option value="">Toutes les langues</option>
                           {(availableFilters.languages || []).map(lang => (
                             <option key={lang} value={lang}>{lang}</option>
                           ))}
@@ -535,7 +599,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                     <FileText className="h-5 w-5 text-orange-600" />
                     <span>
-                      Cases Found: {filteredCases.length}
+                      Décisions trouvées : {filteredCases.length}
                     </span>
                   </h3>
                   
@@ -578,17 +642,17 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                         disabled={pagination.currentPage === 1}
                         className="romulus-btn-secondary px-3 py-1 text-sm disabled:opacity-50"
                       >
-                        Previous
+                        Précédent
                       </button>
                       <span className="text-sm text-gray-600">
-                        Page {pagination.currentPage} of {totalPages}
+                        Page {pagination.currentPage} sur {totalPages}
                       </span>
                       <button
                         onClick={() => updatePage(Math.min(totalPages, pagination.currentPage + 1))}
                         disabled={pagination.currentPage === totalPages}
                         className="romulus-btn-secondary px-3 py-1 text-sm disabled:opacity-50"
                       >
-                        Next
+                        Suivant
                       </button>
                     </div>
                   )}
@@ -668,7 +732,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                           </div>
                           
                           <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                            {case_item.reference}
+                            {case_item.registry_number}
                           </h4>
                           
                           <p className="text-gray-600 mb-3 line-clamp-3">
@@ -700,7 +764,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                               <div className="flex items-center space-x-2 mb-2">
                                 <MessageSquare className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">Résumé par Casalonga</span>
+                                <span className="text-sm font-medium text-blue-800">Résumé administratif</span>
                               </div>
                               <p className="text-sm text-blue-700 line-clamp-2">{case_item.admin_summary}</p>
                             </div>
@@ -734,11 +798,11 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                           <div className="text-sm text-gray-500">
                             <div className="flex items-center space-x-2 mb-1">
                               <Scale className="h-3 w-3" />
-                              <span>Registry: {case_item.registry_number}</span>
+                              <span>Registre: {case_item.registry_number}</span>
                             </div>
                             <div className="flex items-center space-x-2 mb-1">
                               <Globe className="h-3 w-3" />
-                              <span>Language: {case_item.language_of_proceedings}</span>
+                              <span>Langue: {case_item.language_of_proceedings}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                               <FileText className="h-3 w-3" />
@@ -752,7 +816,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                               className="romulus-btn-primary text-sm py-2 flex items-center justify-center space-x-2"
                             >
                               <Eye className="h-4 w-4" />
-                              <span>View Details</span>
+                              <span>Voir détails</span>
                             </button>
                             
                             {(case_item.documents || []).length > 0 && (
@@ -763,7 +827,7 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
                                 className="romulus-btn-secondary text-sm py-2 flex items-center justify-center space-x-2"
                               >
                                 <Download className="h-4 w-4" />
-                                <span>Download</span>
+                                <span>Télécharger</span>
                               </a>
                             )}
                           </div>
@@ -780,6 +844,9 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
 
       {/* Footer */}
       <Footer />
+
+      {/* GDPR Banner */}
+      <GDPRBanner />
 
       {/* Case Detail Modal */}
       <AnimatePresence>
@@ -823,13 +890,38 @@ const AppContent = ({ onShowAdmin, onShowUPCCode }) => {
   );
 };
 
-// Composant App principal avec Provider
+// Page de paramètres de confidentialité
+const PrivacyPage = () => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PrivacySettings />
+      </div>
+    </div>
+  );
+};
+
+// Composant App principal avec Router et Providers
 function App() {
   return (
     <AuthProvider>
-      <DataProvider>
-        <AppWrapper />
-      </DataProvider>
+      <SEOProvider>
+        <DataProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<AppWrapper />} />
+              <Route path="/search" element={<AppWrapper />} />
+              <Route path="/cases/:id" element={<AppWrapper />} />
+              <Route path="/upc-code" element={<AppWrapper />} />
+              <Route path="/dashboard" element={<AppWrapper />} />
+              <Route path="/privacy-settings" element={<PrivacyPage />} />
+              <Route path="/admin" element={<AppWrapper />} />
+              <Route path="/admin/newsletter" element={<AppWrapper />} />
+              <Route path="/admin/permissions" element={<AppWrapper />} />
+            </Routes>
+          </Router>
+        </DataProvider>
+      </SEOProvider>
     </AuthProvider>
   );
 }
@@ -839,21 +931,60 @@ const AppWrapper = () => {
   const { isAdmin } = useAuth();
   const [showAdmin, setShowAdmin] = useState(false);
   const [showUPCCode, setShowUPCCode] = useState(false);
+  const [adminView, setAdminView] = useState('main');
   const { allCases, updateCase } = useData();
+  const location = useLocation();
 
-  return (
-    <>
-      {showAdmin && isAdmin() ? (
+  // Détecter la vue admin basée sur l'URL
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      setShowAdmin(true);
+      if (location.pathname.includes('/newsletter')) {
+        setAdminView('newsletter');
+      } else if (location.pathname.includes('/permissions')) {
+        setAdminView('permissions');
+      } else {
+        setAdminView('main');
+      }
+    } else if (location.pathname.startsWith('/upc-code')) {
+      setShowUPCCode(true);
+    } else {
+      setShowAdmin(false);
+      setShowUPCCode(false);
+    }
+  }, [location.pathname]);
+
+  // Composant Admin avec gestion des sous-vues
+  const AdminComponent = () => {
+    if (adminView === 'newsletter') {
+      return <NewsletterManagement />;
+    } else if (adminView === 'permissions') {
+      return <PermissionsManagement />;
+    } else {
+      return (
         <AdminFullscreen 
           onClose={() => setShowAdmin(false)} 
           cases={allCases}
           onCaseUpdate={updateCase}
+          onShowNewsletter={() => setAdminView('newsletter')}
+          onShowPermissions={() => setAdminView('permissions')}
         />
+      );
+    }
+  };
+
+  return (
+    <>
+      {showAdmin && isAdmin() ? (
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <AdminComponent />
+          </div>
+        </div>
       ) : showUPCCode ? (
         <UPCCode 
           onBack={() => setShowUPCCode(false)}
           onViewCaseDetail={(caseId) => {
-            // Handle case detail view
             console.log('Open case detail:', caseId);
           }}
         />
