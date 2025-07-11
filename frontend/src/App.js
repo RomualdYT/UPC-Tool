@@ -823,19 +823,7 @@ const AppContent = () => {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="text-gray-300 mb-2">
-              Powered by Romulus 2 - Advanced UPC Legal Analysis
-            </p>
-            <button className="romulus-btn-secondary flex items-center space-x-2 mx-auto">
-              <ExternalLink className="h-4 w-4" />
-              <span>Learn More</span>
-            </button>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Case Detail Modal */}
       <AnimatePresence>
