@@ -501,6 +501,10 @@ async def update_case(case_id: str, case_update: CaseUpdateModel):
             update_data["admin_summary"] = case_update.admin_summary
         if case_update.apports is not None:
             update_data["apports"] = [apport.dict() for apport in case_update.apports]
+        if case_update.excluded is not None:
+            update_data["excluded"] = case_update.excluded
+        if case_update.exclusion_reason is not None:
+            update_data["exclusion_reason"] = case_update.exclusion_reason
         
         # Update the case
         result = cases_collection.update_one(
@@ -516,6 +520,111 @@ async def update_case(case_id: str, case_update: CaseUpdateModel):
         updated_case["id"] = str(updated_case.pop("_id"))
         return updated_case
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Admin endpoints
+@app.get("/api/admin/cases", response_model=List[CaseModel])
+async def get_admin_cases(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    case_type: Optional[CaseType] = Query(None),
+    court_division: Optional[str] = Query(None),
+    language: Optional[Language] = Query(None),
+    excluded_only: bool = Query(False),
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get cases for admin (including excluded ones)"""
+    query = {}
+    
+    # Filter for excluded cases only if requested
+    if excluded_only:
+        query["excluded"] = True
+    
+    # Text search
+    if search:
+        query["$text"] = {"$search": search}
+    
+    # Date range filter
+    if date_from or date_to:
+        date_filter = {}
+        if date_from:
+            date_filter["$gte"] = date_from
+        if date_to:
+            date_filter["$lte"] = date_to
+        query["date"] = date_filter
+    
+    # Other filters
+    if case_type:
+        query["type"] = case_type
+    if court_division:
+        query["court_division"] = {"$regex": court_division, "$options": "i"}
+    if language:
+        query["language_of_proceedings"] = language
+    
+    try:
+        cursor = cases_collection.find(query).skip(skip).limit(limit)
+        cases = []
+        for case in cursor:
+            case["id"] = str(case.pop("_id"))
+            cases.append(case)
+        return cases
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/cases/{case_id}/exclude")
+async def exclude_case(
+    case_id: str, 
+    exclusion_data: CaseExclusionModel,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Exclude or include a case (admin only)"""
+    try:
+        # Check if case exists
+        case = cases_collection.find_one({"_id": case_id})
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+        
+        # Update exclusion status
+        update_data = {
+            "excluded": exclusion_data.excluded,
+            "exclusion_reason": exclusion_data.exclusion_reason if exclusion_data.excluded else None
+        }
+        
+        result = cases_collection.update_one(
+            {"_id": case_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="No changes made")
+        
+        # Return updated case
+        updated_case = cases_collection.find_one({"_id": case_id})
+        updated_case["id"] = str(updated_case.pop("_id"))
+        return updated_case
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/cases/excluded")
+async def get_excluded_cases(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get all excluded cases (admin only)"""
+    try:
+        query = {"excluded": True}
+        cursor = cases_collection.find(query).skip(skip).limit(limit)
+        cases = []
+        for case in cursor:
+            case["id"] = str(case.pop("_id"))
+            cases.append(case)
+        return cases
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
