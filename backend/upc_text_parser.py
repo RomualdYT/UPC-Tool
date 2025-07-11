@@ -97,63 +97,86 @@ class UPCTextParser:
         rules = []
         
         # Clean the text
-        text = re.sub(r'\s+', ' ', text)
-        text = text.replace('\n', ' ')
+        text = re.sub(r'\s+', ' ', text).strip()
         
-        # Patterns for different parts and sections
-        part_pattern = r'PART\s+([IVX]+)[\s\-–—]*([^a-z]*?)(?=PART|$)'
-        rule_pattern = r'Rule\s+(\d+(?:\.\d+)?)\s*[:\-–—]*\s*([^a-z]+?)(?=Rule\s+\d+|$)'
+        # Look for rule patterns - more flexible approach
+        # Pattern for "Rule X" followed by content
+        rule_pattern = r'Rule\s+(\d+(?:\.\d+)?)\s*\.?\s*([^\n]+?)(?=\n\s*Rule\s+\d+|\nPart\s+[IVX]+|\n\s*Chapter|\n\s*PART|\Z)'
         
-        # Extract parts
-        parts = re.finditer(part_pattern, text, re.IGNORECASE)
-        current_part = "Part I"
+        # Find all rules
+        matches = re.finditer(rule_pattern, text, re.IGNORECASE | re.DOTALL)
         
-        for part_match in parts:
-            part_num = part_match.group(1)
-            part_content = part_match.group(2)
-            current_part = f"Part {part_num}"
+        current_section = "Part I - General Provisions"
+        
+        for match in matches:
+            rule_num = match.group(1)
+            rule_content = match.group(2).strip()
             
-            # Extract rules from this part
-            rules_in_part = re.finditer(rule_pattern, part_content, re.IGNORECASE)
+            # Skip if content is too short
+            if len(rule_content) < 20:
+                continue
+                
+            # Extract title from first sentence
+            sentences = re.split(r'[.!?]', rule_content)
+            title = sentences[0].strip() if sentences else f"Rule {rule_num}"
             
-            for rule_match in rules_in_part:
-                rule_num = rule_match.group(1)
-                rule_content = rule_match.group(2).strip()
-                
-                # Extract title (first line usually)
-                lines = rule_content.split('.')
-                title = lines[0].strip() if lines else f"Rule {rule_num}"
-                
-                # Clean title
-                title = re.sub(r'^\d+\.?\s*', '', title)
-                title = title.strip()
-                
-                # Extract content (rest of the text)
-                content = rule_content.strip()
-                
-                # Skip if content is too short
-                if len(content) < 50:
-                    continue
-                
-                # Extract keywords
-                keywords = self._extract_keywords(content)
-                
-                # Create rule record
-                rule = {
-                    "_id": str(uuid.uuid4()),
-                    "document_type": doc_type,
-                    "section": current_part,
-                    "article_number": f"Rule {rule_num}",
-                    "title": title,
-                    "content": content,
-                    "language": "EN",
-                    "cross_references": self._extract_cross_references(content),
-                    "keywords": keywords,
-                    "created_date": datetime.now().strftime("%Y-%m-%d"),
-                    "last_updated": datetime.now().strftime("%Y-%m-%d")
-                }
-                
-                rules.append(rule)
+            # Clean title
+            title = re.sub(r'^\d+\.?\s*', '', title)
+            title = title.strip()
+            
+            # If title is too long, truncate
+            if len(title) > 100:
+                title = title[:100] + "..."
+            
+            # Extract keywords
+            keywords = self._extract_keywords(rule_content)
+            
+            # Create rule record
+            rule = {
+                "_id": str(uuid.uuid4()),
+                "document_type": doc_type,
+                "section": current_section,
+                "article_number": f"Rule {rule_num}",
+                "title": title,
+                "content": rule_content,
+                "language": "EN",
+                "cross_references": self._extract_cross_references(rule_content),
+                "keywords": keywords,
+                "created_date": datetime.now().strftime("%Y-%m-%d"),
+                "last_updated": datetime.now().strftime("%Y-%m-%d")
+            }
+            
+            rules.append(rule)
+        
+        # If no rules found with the pattern, try a simpler approach
+        if not rules:
+            print("No rules found with pattern, trying simpler extraction...")
+            # Split by numbers and look for rule-like content
+            sections = re.split(r'\n\s*(\d+)\s*\.', text)
+            for i in range(1, len(sections), 2):
+                if i + 1 < len(sections):
+                    rule_num = sections[i]
+                    rule_content = sections[i + 1].strip()
+                    
+                    if len(rule_content) > 50:  # Minimum content length
+                        title = rule_content.split('.')[0].strip()
+                        if len(title) > 100:
+                            title = title[:100] + "..."
+                        
+                        rule = {
+                            "_id": str(uuid.uuid4()),
+                            "document_type": doc_type,
+                            "section": "Rules of Procedure",
+                            "article_number": f"Rule {rule_num}",
+                            "title": title,
+                            "content": rule_content,
+                            "language": "EN",
+                            "cross_references": self._extract_cross_references(rule_content),
+                            "keywords": self._extract_keywords(rule_content),
+                            "created_date": datetime.now().strftime("%Y-%m-%d"),
+                            "last_updated": datetime.now().strftime("%Y-%m-%d")
+                        }
+                        rules.append(rule)
         
         return rules
     
