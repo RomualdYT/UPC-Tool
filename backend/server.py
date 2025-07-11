@@ -330,6 +330,36 @@ class CaseExclusionModel(BaseModel):
     excluded: bool
     exclusion_reason: Optional[str] = None
 
+class PendingChangeModel(BaseModel):
+    id: str
+    case_id: str
+    user_id: str
+    user_name: str
+    change_type: str  # 'admin_summary', 'apports', 'case_update'
+    original_data: Dict[str, Any]
+    new_data: Dict[str, Any]
+    reason: Optional[str] = None
+    status: str = 'pending'  # 'pending', 'approved', 'rejected'
+    created_at: datetime
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
+
+class NewsletterModel(BaseModel):
+    id: str
+    subject: str
+    content: str
+    recipients: List[str]
+    created_at: datetime
+    sent_at: Optional[datetime] = None
+    status: str = 'draft'  # 'draft', 'sent'
+
+class SettingsModel(BaseModel):
+    id: str
+    key: str
+    value: Dict[str, Any]
+    updated_at: datetime
+    updated_by: str
+
 # Authentication endpoints
 @app.post("/api/auth/register", response_model=UserResponse)
 async def register(user: UserCreate):
