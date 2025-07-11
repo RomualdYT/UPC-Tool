@@ -1184,8 +1184,8 @@ class UPCLegalAPITester(unittest.TestCase):
             self.assertEqual(login_response.status_code, 200)
             editor_token = login_response.json()["access_token"]
             
-            # Get a case to modify
-            cases_response = self.session.get(f"{self.api_url}/cases", params={"limit": 1})
+            # Get a case to modify (including excluded ones for testing)
+            cases_response = self.session.get(f"{self.api_url}/cases", params={"limit": 1, "include_excluded": True})
             self.assertEqual(cases_response.status_code, 200)
             cases = cases_response.json()
             
@@ -1232,8 +1232,8 @@ class UPCLegalAPITester(unittest.TestCase):
                 print("⚠️ Could not get admin token")
                 return False
             
-            # Get a case to modify
-            cases_response = self.session.get(f"{self.api_url}/cases", params={"limit": 1})
+            # Get a case to modify (including excluded ones for testing)
+            cases_response = self.session.get(f"{self.api_url}/cases", params={"limit": 1, "include_excluded": True})
             self.assertEqual(cases_response.status_code, 200)
             cases = cases_response.json()
             
