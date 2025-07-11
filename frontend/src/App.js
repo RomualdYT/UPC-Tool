@@ -853,10 +853,10 @@ const AppContent = () => {
         )}
       </AnimatePresence>
 
-      {/* Admin Panel */}
+      {/* Admin Fullscreen */}
       <AnimatePresence>
         {showAdmin && isAdmin() && (
-          <AdminPanel 
+          <AdminFullscreen 
             onClose={() => setShowAdmin(false)} 
             cases={allCases}
             onCaseUpdate={updateCase}
