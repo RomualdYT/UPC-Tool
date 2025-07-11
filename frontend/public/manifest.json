@@ -1,58 +1,15 @@
 {
-  "short_name": "Romulus 2",
-  "name": "Romulus 2 - UPC Legal Analysis",
-  "description": "Advanced search and analysis of Unified Patent Court decisions and orders",
+  "short_name": "UPC Legal",
+  "name": "UPC Legal - Decisions and Orders",
   "icons": [
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#f97316",
-  "background_color": "#ffffff",
-  "orientation": "portrait-primary",
-  "categories": ["legal", "business", "productivity"],
-  "lang": "en",
-  "scope": "/",
-  "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "View UPC legal analytics dashboard",
-      "url": "/dashboard",
-      "icons": [
-        {
-          "src": "logo192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Search Cases",
-      "short_name": "Search",
-      "description": "Search UPC legal cases",
-      "url": "/search",
-      "icons": [
-        {
-          "src": "logo192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ]
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
 }

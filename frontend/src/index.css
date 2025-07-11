@@ -5,61 +5,44 @@
 
 @layer base {
   * {
-    @apply border-gray-200 dark:border-gray-700;
+    @apply border-gray-200;
   }
-  
   body {
-    @apply bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 transition-colors;
-  }
-  
-  /* Transitions pour le changement de thème */
-  .theme-transitions,
-  .theme-transitions * {
-    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter;
-    transition-duration: 200ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  /* Désactiver les transitions pour les personnes sensibles au mouvement */
-  @media (prefers-reduced-motion: reduce) {
-    .theme-transitions,
-    .theme-transitions * {
-      transition: none !important;
-    }
+    @apply bg-slate-50 text-slate-900;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg;
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg;
   }
   
   .btn-secondary {
-    @apply bg-secondary-600 hover:bg-secondary-700 dark:bg-secondary-500 dark:hover:bg-secondary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg;
+    @apply bg-secondary-600 hover:bg-secondary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg;
   }
   
   .btn-outline {
-    @apply border-2 border-primary-600 dark:border-primary-500 text-primary-600 dark:text-primary-400 hover:bg-primary-600 dark:hover:bg-primary-500 hover:text-white font-medium py-2 px-4 rounded-lg transition-all duration-200;
+    @apply border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-medium py-2 px-4 rounded-lg transition-all duration-200;
   }
   
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-legal border border-gray-200 dark:border-gray-700 p-6;
+    @apply bg-white rounded-xl shadow-legal border border-gray-200 p-6;
   }
   
   .card-hover {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-legal border border-gray-200 dark:border-gray-700 p-6 hover:shadow-legal-lg transition-shadow duration-300 cursor-pointer;
+    @apply bg-white rounded-xl shadow-legal border border-gray-200 p-6 hover:shadow-legal-lg transition-shadow duration-300 cursor-pointer;
   }
   
   .input-field {
-    @apply border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-transparent transition-all duration-200;
+    @apply border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
   }
   
   .table-header {
-    @apply bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-800 dark:to-secondary-800 text-legal-700 dark:text-legal-200 font-semibold text-sm py-3 px-4 border-b border-gray-200 dark:border-gray-700;
+    @apply bg-gradient-to-r from-primary-50 to-secondary-50 text-legal-700 font-semibold text-sm py-3 px-4 border-b border-gray-200;
   }
   
   .table-cell {
-    @apply text-legal-600 dark:text-legal-300 text-sm py-3 px-4 border-b border-gray-100 dark:border-gray-700;
+    @apply text-legal-600 text-sm py-3 px-4 border-b border-gray-100;
   }
   
   .legal-badge {
@@ -67,19 +50,19 @@
   }
   
   .legal-badge-primary {
-    @apply legal-badge bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200;
+    @apply legal-badge bg-primary-100 text-primary-800;
   }
   
   .legal-badge-secondary {
-    @apply legal-badge bg-secondary-100 dark:bg-secondary-900 text-secondary-800 dark:text-secondary-200;
+    @apply legal-badge bg-secondary-100 text-secondary-800;
   }
   
   .legal-badge-success {
-    @apply legal-badge bg-accent-100 dark:bg-accent-900 text-accent-800 dark:text-accent-200;
+    @apply legal-badge bg-accent-100 text-accent-800;
   }
   
   .legal-badge-gray {
-    @apply legal-badge bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200;
+    @apply legal-badge bg-gray-100 text-gray-800;
   }
 }
 
@@ -146,7 +129,7 @@
 
 /* Romulus 2 specific styles */
 .romulus-card {
-  @apply bg-white dark:bg-gray-800 rounded-xl shadow-orange border border-orange-200 dark:border-orange-700 p-6 hover:shadow-orange-lg transition-all duration-300;
+  @apply bg-white rounded-xl shadow-orange border border-orange-200 p-6 hover:shadow-orange-lg transition-all duration-300;
 }
 
 .romulus-badge {
@@ -154,23 +137,23 @@
 }
 
 .romulus-badge-primary {
-  @apply romulus-badge bg-gradient-to-r from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 text-white;
+  @apply romulus-badge bg-gradient-to-r from-orange-500 to-orange-600 text-white;
 }
 
 .romulus-badge-secondary {
-  @apply romulus-badge bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200;
+  @apply romulus-badge bg-orange-100 text-orange-800;
 }
 
 .romulus-btn {
-  @apply font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500;
+  @apply font-medium py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105;
 }
 
 .romulus-btn-primary {
-  @apply romulus-btn bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 dark:from-orange-600 dark:to-orange-700 dark:hover:from-orange-700 dark:hover:to-orange-800 text-white shadow-orange hover:shadow-orange-lg;
+  @apply romulus-btn bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-orange hover:shadow-orange-lg;
 }
 
 .romulus-btn-secondary {
-  @apply romulus-btn border-2 border-orange-500 dark:border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-500 dark:hover:bg-orange-600 hover:text-white;
+  @apply romulus-btn border-2 border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white;
 }
 
 /* Styles pour le tableau de données */
@@ -186,10 +169,6 @@
   background: white;
 }
 
-.dark .data-table {
-  background: #1f2937;
-}
-
 .data-table th {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   color: white;
@@ -200,10 +179,6 @@
   position: sticky;
   top: 0;
   z-index: 10;
-}
-
-.dark .data-table th {
-  background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
 }
 
 .data-table th:hover {
@@ -217,34 +192,17 @@
   vertical-align: top;
 }
 
-.dark .data-table td {
-  border-bottom: 1px solid #374151;
-  color: #d1d5db;
-}
-
 .data-table tbody tr:hover {
   background-color: #fef3c7;
   transition: background-color 0.2s ease;
-}
-
-.dark .data-table tbody tr:hover {
-  background-color: #374151;
 }
 
 .data-table tbody tr:nth-child(even) {
   background-color: #fafafa;
 }
 
-.dark .data-table tbody tr:nth-child(even) {
-  background-color: #1f2937;
-}
-
 .data-table tbody tr:nth-child(even):hover {
   background-color: #fef3c7;
-}
-
-.dark .data-table tbody tr:nth-child(even):hover {
-  background-color: #374151;
 }
 
 /* Styles pour les badges dans le tableau */
@@ -278,19 +236,10 @@
   border: 1px solid #e5e7eb;
 }
 
-.dark .chart-container {
-  background: #1f2937;
-  border-color: #374151;
-}
-
 .chart-container h4 {
   margin-bottom: 16px;
   font-weight: 600;
   color: #374151;
-}
-
-.dark .chart-container h4 {
-  color: #d1d5db;
 }
 
 /* Styles pour les statistiques */
@@ -328,138 +277,6 @@
 
 .stats-card .icon {
   opacity: 0.8;
-}
-
-/* Skeleton animations */
-@keyframes skeletonPulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.skeleton-loader {
-  @apply animate-skeleton-pulse;
-}
-
-/* Styles pour les notifications */
-.notification-enter {
-  opacity: 0;
-  transform: translateX(100%);
-}
-
-.notification-enter-active {
-  opacity: 1;
-  transform: translateX(0);
-  transition: opacity 300ms, transform 300ms;
-}
-
-.notification-exit {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.notification-exit-active {
-  opacity: 0;
-  transform: translateX(100%);
-  transition: opacity 300ms, transform 300ms;
-}
-
-/* Styles pour le mode sombre des scrollbars */
-.dark ::-webkit-scrollbar {
-  width: 8px;
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: #374151;
-  border-radius: 10px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #6b7280;
-  border-radius: 10px;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-/* Améliorations visuelles pour les micro-interactions */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.dark .hover-lift:hover {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-}
-
-/* Styles pour les badges avec animations */
-.badge-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.badge-shimmer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.badge-shimmer:hover::before {
-  left: 100%;
-}
-
-/* Styles pour les formulaires améliorés */
-.form-group {
-  @apply mb-4;
-}
-
-.form-label {
-  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
-}
-
-.form-input {
-  @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors;
-}
-
-.form-input:focus {
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
-}
-
-/* Styles pour les alertes */
-.alert {
-  @apply p-4 rounded-lg border-l-4 mb-4;
-}
-
-.alert-success {
-  @apply bg-green-50 dark:bg-green-900 border-green-400 text-green-700 dark:text-green-300;
-}
-
-.alert-error {
-  @apply bg-red-50 dark:bg-red-900 border-red-400 text-red-700 dark:text-red-300;
-}
-
-.alert-warning {
-  @apply bg-yellow-50 dark:bg-yellow-900 border-yellow-400 text-yellow-700 dark:text-yellow-300;
-}
-
-.alert-info {
-  @apply bg-blue-50 dark:bg-blue-900 border-blue-400 text-blue-700 dark:text-blue-300;
 }
 
 /* Responsive design pour le tableau */
