@@ -1023,15 +1023,15 @@ class UPCLegalAPITester(unittest.TestCase):
             # Try to access admin endpoints without token
             case_id = "test-case-id"
             
-            # Test exclude endpoint without auth
+            # Test exclude endpoint without auth - should return 403 (FastAPI with HTTPBearer)
             exclusion_data = {"excluded": True, "exclusion_reason": "Test"}
             response = self.session.put(f"{self.api_url}/admin/cases/{case_id}/exclude", 
                                       json=exclusion_data, timeout=self.timeout)
-            self.assertEqual(response.status_code, 401, "Should return 401 Unauthorized")
+            self.assertIn(response.status_code, [401, 403], "Should return 401 or 403 for unauthorized access")
             
             # Test get excluded cases without auth
             response = self.session.get(f"{self.api_url}/admin/cases/excluded", timeout=self.timeout)
-            self.assertEqual(response.status_code, 401, "Should return 401 Unauthorized")
+            self.assertIn(response.status_code, [401, 403], "Should return 401 or 403 for unauthorized access")
             
             # Test with regular user token (not admin)
             user_token = self.test_20_user_login()
