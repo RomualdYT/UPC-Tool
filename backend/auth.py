@@ -27,12 +27,14 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 # Enums
-class UserRole(str):
+from enum import Enum
+
+class UserRole(str, Enum):
     USER = "user"
     EDITOR = "editor"
     ADMIN = "admin"
 
-class UserProfile(str):
+class UserProfile(str, Enum):
     PROFESSIONAL = "professional"
     STUDENT = "student"
     ACADEMIC = "academic"
