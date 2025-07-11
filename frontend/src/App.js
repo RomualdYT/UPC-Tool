@@ -708,7 +708,7 @@ const AppContent = () => {
                             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                               <div className="flex items-center space-x-2 mb-2">
                                 <MessageSquare className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">Résumé administratif</span>
+                                <span className="text-sm font-medium text-blue-800">Résumé par Casalonga</span>
                               </div>
                               <p className="text-sm text-blue-700 line-clamp-2">{case_item.admin_summary}</p>
                             </div>
