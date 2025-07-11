@@ -27,6 +27,8 @@ import FooterManager from './components/admin/FooterManager';
 import UPCSync from './components/admin/UPCSync';
 import CaseExclusions from './components/admin/CaseExclusions';
 import AdminCasesManager from './components/admin/AdminCasesManager';
+import NewsletterManagement from './components/admin/NewsletterManagement';
+import PermissionsManagement from './components/admin/PermissionsManagement';
 
 const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
   const { t } = useTranslation();
