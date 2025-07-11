@@ -38,10 +38,13 @@ import { exportData, exportStats } from './ExportUtils';
 import Notification from './Notification';
 import ThemeToggle from './components/ThemeToggle';
 import { CaseCardSkeleton, TableSkeleton } from './components/SkeletonLoader';
+import OfflineIndicator from './components/PWA/OfflineIndicator';
+import SEOWrapper from './components/SEO/SEOWrapper';
 
 // Import du contexte de données et du thème
 import { DataProvider, useData } from './contexts/DataContext';
 import { useTheme } from './contexts/ThemeContext';
+import { useSEO } from './contexts/SEOContext';
 
 // Composant principal de l'application
 const AppContent = () => {
