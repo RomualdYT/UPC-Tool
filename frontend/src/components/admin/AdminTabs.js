@@ -14,6 +14,7 @@ import UPCTextManager from './UPCTextManager';
 import UserManagement from './UserManagement';
 import FooterManager from './FooterManager';
 import UPCSync from './UPCSync';
+import CaseExclusions from './CaseExclusions';
 
 const AdminTabs = ({ onClose, backendUrl, getAuthHeaders }) => {
   const [activeTab, setActiveTab] = useState('users');
