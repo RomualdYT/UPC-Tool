@@ -211,7 +211,7 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
           <div className="mb-4">
             <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center space-x-1">
               <MessageSquare className="h-4 w-4" />
-              <span>Résumé administratif</span>
+              <span>Résumé par Casalonga</span>
             </h4>
             <p className="text-xs text-gray-700 bg-blue-50 p-2 rounded border border-blue-200 line-clamp-3">
               {case_item.admin_summary}
