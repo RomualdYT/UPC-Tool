@@ -220,18 +220,17 @@ const AppContent = () => {
   const totalPages = Math.ceil(filteredCases.length / pagination.itemsPerPage);
 
   return (
-    <SEOWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
-        {/* Offline Indicator */}
-        <OfflineIndicator />
-        
-        {/* Header */}
-        <motion.header 
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="gradient-primary dark:from-gray-800 dark:to-gray-900 shadow-orange-lg sticky top-0 z-40 transition-all"
-        >
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
+      {/* Offline Indicator */}
+      <OfflineIndicator />
+      
+      {/* Header */}
+      <motion.header 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="gradient-primary dark:from-gray-800 dark:to-gray-900 shadow-orange-lg sticky top-0 z-40 transition-all"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
