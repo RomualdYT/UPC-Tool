@@ -457,6 +457,21 @@ const UPCCode = ({ onBack }) => {
           </div>
         </div>
       </div>
+
+      {/* UPC Text Loader Modal */}
+      <AnimatePresence>
+        {showTextLoader && (
+          <UPCTextLoader 
+            onClose={() => setShowTextLoader(false)}
+            onTextsLoaded={() => {
+              setShowTextLoader(false);
+              // Refresh the data
+              fetchUPCStructure();
+              fetchUPCTexts();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
