@@ -447,6 +447,304 @@ class UPCLegalAPITester(unittest.TestCase):
             print(f"❌ Real data extraction test error: {str(e)}")
             return False
 
+    def test_13_upc_texts_endpoint(self):
+        """Test the UPC texts endpoint - should return 5 sample legal texts"""
+        print("\n🔍 Testing UPC texts endpoint...")
+        try:
+            start_time = time.time()
+            response = self.session.get(f"{self.api_url}/upc-texts", timeout=self.timeout)
+            elapsed_time = time.time() - start_time
+            
+            print(f"  Response time: {elapsed_time:.2f} seconds")
+            self.assertEqual(response.status_code, 200)
+            texts = response.json()
+            self.assertIsInstance(texts, list)
+            
+            print(f"  Retrieved {len(texts)} UPC legal texts")
+            
+            # Should have exactly 5 sample texts as per the server.py initialization
+            self.assertEqual(len(texts), 5, "Expected exactly 5 sample UPC legal texts")
+            
+            # Verify structure of texts
+            if texts:
+                text = texts[0]
+                required_fields = ["id", "document_type", "section", "article_number", 
+                                 "title", "content", "language", "cross_references", 
+                                 "keywords", "created_date", "last_updated"]
+                for field in required_fields:
+                    self.assertIn(field, text, f"Missing required field: {field}")
+                
+                # Verify specific sample data
+                article_numbers = [text.get("article_number") for text in texts]
+                expected_articles = ["Rule 1", "Rule 2", "Rule 13", "Rule 206", "Article 32"]
+                for expected in expected_articles:
+                    self.assertIn(expected, article_numbers, f"Expected article {expected} not found")
+                
+                print("✅ UPC texts structure and content are valid")
+            
+            return True
+        except Exception as e:
+            print(f"❌ UPC texts endpoint error: {str(e)}")
+            return False
+
+    def test_14_upc_texts_structure_endpoint(self):
+        """Test the UPC texts structure endpoint"""
+        print("\n🔍 Testing UPC texts structure endpoint...")
+        try:
+            start_time = time.time()
+            response = self.session.get(f"{self.api_url}/upc-texts/structure", timeout=self.timeout)
+            elapsed_time = time.time() - start_time
+            
+            print(f"  Response time: {elapsed_time:.2f} seconds")
+            self.assertEqual(response.status_code, 200)
+            structure = response.json()
+            self.assertIsInstance(structure, dict)
+            
+            # Should have document types as keys
+            expected_doc_types = ["rules_of_procedure", "upc_agreement"]
+            for doc_type in expected_doc_types:
+                self.assertIn(doc_type, structure, f"Expected document type {doc_type} not found")
+                
+                # Each document type should have sections and count
+                self.assertIn("sections", structure[doc_type])
+                self.assertIn("count", structure[doc_type])
+                self.assertIsInstance(structure[doc_type]["sections"], list)
+                self.assertIsInstance(structure[doc_type]["count"], int)
+            
+            print(f"  Structure contains {len(structure)} document types")
+            for doc_type, info in structure.items():
+                print(f"    {doc_type}: {info['count']} texts, {len(info['sections'])} sections")
+            
+            print("✅ UPC texts structure endpoint is working correctly")
+            return True
+        except Exception as e:
+            print(f"❌ UPC texts structure endpoint error: {str(e)}")
+            return False
+
+    def test_15_add_apport_to_case(self):
+        """Test adding an apport with Rule 13 to a case for testing linked-cases functionality"""
+        print("\n🔍 Testing adding apport to case for linking...")
+        try:
+            # First get a case to add apport to
+            response = self.session.get(f"{self.api_url}/cases", params={"limit": 1}, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            cases = response.json()
+            
+            if not cases:
+                print("⚠️ No cases found to add apport to")
+                return False
+            
+            case = cases[0]
+            case_id = case["id"]
+            
+            # Add an apport with Rule 13 reference
+            apport_data = {
+                "admin_summary": "Test case for UPC Code system linking",
+                "apports": [
+                    {
+                        "id": 1,
+                        "article_number": "Rule 13",
+                        "regulation": "Rules of Procedure",
+                        "citation": "Rule 13 - Contents of the Statement of claim"
+                    }
+                ]
+            }
+            
+            # Update the case with apport
+            update_response = self.session.put(f"{self.api_url}/cases/{case_id}", 
+                                             json=apport_data, timeout=self.timeout)
+            self.assertEqual(update_response.status_code, 200)
+            
+            updated_case = update_response.json()
+            self.assertIn("apports", updated_case)
+            self.assertEqual(len(updated_case["apports"]), 1)
+            self.assertEqual(updated_case["apports"][0]["article_number"], "Rule 13")
+            
+            print(f"✅ Successfully added Rule 13 apport to case {case_id}")
+            return case_id
+        except Exception as e:
+            print(f"❌ Add apport test error: {str(e)}")
+            return False
+
+    def test_16_upc_texts_linked_cases_endpoint(self):
+        """Test the linked cases endpoint for UPC texts"""
+        print("\n🔍 Testing UPC texts linked cases endpoint...")
+        try:
+            # First ensure we have a case with Rule 13 apport
+            case_id = self.test_15_add_apport_to_case()
+            if not case_id:
+                print("⚠️ Could not set up test case with apport")
+                return False
+            
+            # Get the Rule 13 text ID
+            texts_response = self.session.get(f"{self.api_url}/upc-texts", timeout=self.timeout)
+            self.assertEqual(texts_response.status_code, 200)
+            texts = texts_response.json()
+            
+            rule_13_text = None
+            for text in texts:
+                if text.get("article_number") == "Rule 13":
+                    rule_13_text = text
+                    break
+            
+            self.assertIsNotNone(rule_13_text, "Rule 13 text not found")
+            
+            # Test the linked cases endpoint
+            text_id = rule_13_text["id"]
+            linked_response = self.session.get(f"{self.api_url}/upc-texts/{text_id}/linked-cases", 
+                                             timeout=self.timeout)
+            self.assertEqual(linked_response.status_code, 200)
+            linked_cases = linked_response.json()
+            
+            self.assertIsInstance(linked_cases, list)
+            
+            # Should find at least one linked case (the one we just added apport to)
+            self.assertGreater(len(linked_cases), 0, "Expected to find at least one linked case")
+            
+            # Verify the structure of linked cases
+            if linked_cases:
+                linked_case = linked_cases[0]
+                required_fields = ["case_id", "case_title", "parties", "date", 
+                                 "citation", "apport_id", "summary"]
+                for field in required_fields:
+                    self.assertIn(field, linked_case, f"Missing required field: {field}")
+                
+                # Verify it's the case we added apport to
+                self.assertEqual(linked_case["case_id"], case_id)
+                self.assertEqual(linked_case["citation"], "Rule 13 - Contents of the Statement of claim")
+            
+            print(f"✅ Found {len(linked_cases)} linked cases for Rule 13")
+            return True
+        except Exception as e:
+            print(f"❌ Linked cases endpoint error: {str(e)}")
+            return False
+
+    def test_17_upc_texts_filtering(self):
+        """Test UPC texts filtering functionality"""
+        print("\n🔍 Testing UPC texts filtering...")
+        try:
+            # Test filtering by document type
+            response = self.session.get(f"{self.api_url}/upc-texts", 
+                                      params={"document_type": "rules_of_procedure"}, 
+                                      timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            rop_texts = response.json()
+            
+            for text in rop_texts:
+                self.assertEqual(text["document_type"], "rules_of_procedure")
+            
+            print(f"  Found {len(rop_texts)} Rules of Procedure texts")
+            
+            # Test filtering by section
+            response = self.session.get(f"{self.api_url}/upc-texts", 
+                                      params={"section": "Part I - General Provisions"}, 
+                                      timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            part1_texts = response.json()
+            
+            for text in part1_texts:
+                self.assertEqual(text["section"], "Part I - General Provisions")
+            
+            print(f"  Found {len(part1_texts)} Part I texts")
+            
+            # Test filtering by language (default is EN)
+            response = self.session.get(f"{self.api_url}/upc-texts", 
+                                      params={"language": "EN"}, 
+                                      timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            en_texts = response.json()
+            
+            for text in en_texts:
+                self.assertEqual(text["language"], "EN")
+            
+            print(f"  Found {len(en_texts)} English texts")
+            
+            print("✅ UPC texts filtering is working correctly")
+            return True
+        except Exception as e:
+            print(f"❌ UPC texts filtering error: {str(e)}")
+            return False
+
+    def test_18_upc_code_system_workflow(self):
+        """Test the complete UPC Code system workflow"""
+        print("\n🔍 Testing complete UPC Code system workflow...")
+        try:
+            # 1. Verify UPC texts are loaded
+            texts_response = self.session.get(f"{self.api_url}/upc-texts", timeout=self.timeout)
+            self.assertEqual(texts_response.status_code, 200)
+            texts = texts_response.json()
+            self.assertEqual(len(texts), 5, "Expected 5 UPC legal texts")
+            
+            # 2. Verify structure endpoint works
+            structure_response = self.session.get(f"{self.api_url}/upc-texts/structure", timeout=self.timeout)
+            self.assertEqual(structure_response.status_code, 200)
+            structure = structure_response.json()
+            self.assertIn("rules_of_procedure", structure)
+            self.assertIn("upc_agreement", structure)
+            
+            # 3. Find Rule 13 text
+            rule_13_text = None
+            for text in texts:
+                if text.get("article_number") == "Rule 13":
+                    rule_13_text = text
+                    break
+            self.assertIsNotNone(rule_13_text, "Rule 13 text not found")
+            
+            # 4. Get a case and add Rule 13 apport
+            cases_response = self.session.get(f"{self.api_url}/cases", params={"limit": 1}, timeout=self.timeout)
+            self.assertEqual(cases_response.status_code, 200)
+            cases = cases_response.json()
+            self.assertGreater(len(cases), 0, "No cases found")
+            
+            case = cases[0]
+            case_id = case["id"]
+            
+            # Add Rule 13 apport
+            apport_data = {
+                "admin_summary": "UPC Code system workflow test",
+                "apports": [
+                    {
+                        "id": 2,
+                        "article_number": "Rule 13",
+                        "regulation": "Rules of Procedure",
+                        "citation": "Rule 13 - Contents of the Statement of claim"
+                    }
+                ]
+            }
+            
+            update_response = self.session.put(f"{self.api_url}/cases/{case_id}", 
+                                             json=apport_data, timeout=self.timeout)
+            self.assertEqual(update_response.status_code, 200)
+            
+            # 5. Verify linking works
+            text_id = rule_13_text["id"]
+            linked_response = self.session.get(f"{self.api_url}/upc-texts/{text_id}/linked-cases", 
+                                             timeout=self.timeout)
+            self.assertEqual(linked_response.status_code, 200)
+            linked_cases = linked_response.json()
+            self.assertGreater(len(linked_cases), 0, "No linked cases found")
+            
+            # 6. Verify the linked case is correct
+            found_case = False
+            for linked_case in linked_cases:
+                if linked_case["case_id"] == case_id:
+                    found_case = True
+                    self.assertEqual(linked_case["citation"], "Rule 13 - Contents of the Statement of claim")
+                    break
+            
+            self.assertTrue(found_case, "Expected case not found in linked cases")
+            
+            print("✅ Complete UPC Code system workflow is working correctly")
+            print(f"  - {len(texts)} UPC legal texts loaded")
+            print(f"  - Document structure properly organized")
+            print(f"  - Case-text linking via apports functional")
+            print(f"  - Found {len(linked_cases)} linked cases for Rule 13")
+            
+            return True
+        except Exception as e:
+            print(f"❌ UPC Code system workflow error: {str(e)}")
+            return False
+
 def run_tests():
     # Create a test suite
     suite = unittest.TestSuite()
