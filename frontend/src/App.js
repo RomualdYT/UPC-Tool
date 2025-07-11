@@ -153,6 +153,10 @@ const AppContent = () => {
     setCurrentView('dashboard');
   };
 
+  const handleNavigateToUPCCode = () => {
+    setCurrentView('upc-code');
+  };
+
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
   };
