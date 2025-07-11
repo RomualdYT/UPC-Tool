@@ -50,6 +50,7 @@ import { useSEO } from './contexts/SEOContext';
 const AppContent = () => {
   const { t, i18n } = useTranslation();
   const { isDark } = useTheme();
+  const { generateDashboardSEO, generateSearchSEO, resetToHome } = useSEO();
   
   // État du contexte de données
   const {
