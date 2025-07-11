@@ -278,12 +278,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "UPC Legal Texts API"
-    - "UPC Texts Structure API"
-    - "UPC Texts Linked Cases API"
-    - "UPC Texts Filtering"
-    - "Apports System Integration"
-    - "UPC Code System Workflow"
+    - "User Authentication System"
+    - "Admin Authentication and Role Management"
+    - "Case Exclusion System"
+    - "Authentication Endpoint Protection"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
