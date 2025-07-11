@@ -440,10 +440,15 @@ async def get_cases_count(
     date_to: Optional[str] = Query(None),
     case_type: Optional[CaseType] = Query(None),
     court_division: Optional[str] = Query(None),
-    language: Optional[Language] = Query(None)
+    language: Optional[Language] = Query(None),
+    include_excluded: bool = Query(False)
 ):
     """Get total count of cases matching filters"""
     query = {}
+    
+    # By default, exclude excluded cases for public access
+    if not include_excluded:
+        query["excluded"] = {"$ne": True}
     
     if search:
         query["$text"] = {"$search": search}
