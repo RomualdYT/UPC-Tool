@@ -11,6 +11,8 @@ import uuid
 from enum import Enum
 import asyncio
 import threading
+import json
+import re
 
 # Import authentication
 from .auth import (
@@ -51,6 +53,40 @@ pending_changes_collection = db['pending_changes']  # For editor changes pending
 newsletter_collection = db['newsletter']  # For newsletter management
 settings_collection = db['settings']  # For system settings
 
+# Helper function to detect cross-references in text
+def detect_cross_references(text: str) -> List[str]:
+    """Detect cross-references in text content"""
+    references = []
+    
+    # Pattern for Rule references (e.g., "Rule 13", "Rule 206.1")
+    rule_pattern = r'Rule\s+(\d+(?:\.\d+)?(?:[a-z])?)'
+    rule_matches = re.findall(rule_pattern, text, re.IGNORECASE)
+    for match in rule_matches:
+        references.append(f"Rule {match}")
+    
+    # Pattern for Article references (e.g., "Article 32", "Article 60 UPCA")
+    article_pattern = r'Article\s+(\d+(?:\.\d+)?(?:[a-z])?)'
+    article_matches = re.findall(article_pattern, text, re.IGNORECASE)
+    for match in article_matches:
+        references.append(f"Article {match}")
+    
+    # Pattern for specific Agreement references
+    agreement_pattern = r'Article\s+(\d+(?:\.\d+)?(?:[a-z])?)\s+(?:of\s+the\s+)?(?:Agreement|UPCA)'
+    agreement_matches = re.findall(agreement_pattern, text, re.IGNORECASE)
+    for match in agreement_matches:
+        references.append(f"Article {match} UPCA")
+    
+    # Pattern for paragraph references within same rule
+    paragraph_pattern = r'paragraph\s+(\d+(?:\.\d+)?(?:[a-z])?)'
+    paragraph_matches = re.findall(paragraph_pattern, text, re.IGNORECASE)
+    for match in paragraph_matches:
+        references.append(f"paragraph {match}")
+    
+    # Remove duplicates and sort
+    references = sorted(list(set(references)))
+    
+    return references
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -62,6 +98,7 @@ async def lifespan(app: FastAPI):
     # Create text index for search
     try:
         cases_collection.create_index([("summary", "text"), ("parties", "text"), ("reference", "text")])
+        upc_texts_collection.create_index([("title", "text"), ("content", "text"), ("article_number", "text")])
     except Exception as e:
         print(f"Index creation warning: {e}")
     
@@ -75,60 +112,13 @@ async def lifespan(app: FastAPI):
         sample_upc_texts = [
             {
                 "_id": str(uuid.uuid4()),
-                "document_type": "rules_of_procedure",
-                "section": "Part I - General Provisions",
-                "article_number": "Rule 1",
-                "title": "Scope of the Rules",
-                "content": "These Rules shall govern the procedure before the Court in accordance with the Agreement and the Statute.",
-                "language": "EN",
-                "cross_references": ["Rule 2", "Article 1 UPCA"],
-                "keywords": ["procedure", "scope", "agreement", "statute"],
-                "created_date": "2025-01-11",
-                "last_updated": "2025-01-11"
-            },
-            {
-                "_id": str(uuid.uuid4()),
-                "document_type": "rules_of_procedure",
-                "section": "Part I - General Provisions",
-                "article_number": "Rule 2",
-                "title": "Definitions",
-                "content": "For the purposes of these Rules: (a) 'Agreement' means the Agreement on a Unified Patent Court; (b) 'Statute' means the Statute of the Unified Patent Court; (c) 'Court' means the Unified Patent Court; (d) 'Registry' means the Registry of the Court.",
-                "language": "EN",
-                "cross_references": ["Rule 1", "Rule 3"],
-                "keywords": ["definitions", "agreement", "statute", "court", "registry"],
-                "created_date": "2025-01-11",
-                "last_updated": "2025-01-11"
-            },
-            {
-                "_id": str(uuid.uuid4()),
-                "document_type": "rules_of_procedure",
-                "section": "Part II - Proceedings before the Court of First Instance",
-                "article_number": "Rule 13",
-                "title": "Contents of the Statement of claim",
-                "content": "The Statement of claim shall contain: (a) the names of the parties and of their representatives; (b) postal and electronic addresses for service and the names of the persons authorised to accept service; (c) the subject-matter of the dispute and the facts relied on; (d) the evidence relied on; (e) the reasons in fact and law relied on; (f) the order or remedy sought; (g) details of any order sought for provisional measures; (h) an indication of any oral procedure preferred; (i) a list of documents; (j) information on any parallel or related proceedings.",
-                "language": "EN",
-                "cross_references": ["Rule 14", "Rule 15", "Rule 206"],
-                "keywords": ["statement", "claim", "procedure", "evidence", "remedy"],
-                "created_date": "2025-01-11",
-                "last_updated": "2025-01-11"
-            },
-            {
-                "_id": str(uuid.uuid4()),
-                "document_type": "rules_of_procedure",
-                "section": "Part VI - Provisional measures",
-                "article_number": "Rule 206",
-                "title": "Application for provisional measures",
-                "content": "1. An Application for provisional measures may be lodged as a separate action or in conjunction with an action on the merits. 2. The Application for provisional measures shall contain the information set out in Rule 13 and, in addition: (a) an indication of the provisional measure sought; (b) the reasons why the provisional measure is needed; (c) the facts and evidence relied on; (d) where appropriate, an indication that the applicant is prepared to provide a security.",
-                "language": "EN",
-                "cross_references": ["Rule 13", "Rule 207", "Article 60 UPCA"],
-                "keywords": ["provisional", "measures", "application", "security", "evidence"],
-                "created_date": "2025-01-11",
-                "last_updated": "2025-01-11"
-            },
-            {
-                "_id": str(uuid.uuid4()),
                 "document_type": "upc_agreement",
-                "section": "Part I - General and Institutional Provisions",
+                "part_number": "1",
+                "part_title": "General and Institutional Provisions",
+                "chapter_number": None,
+                "chapter_title": None,
+                "section_number": None,
+                "section_title": None,
                 "article_number": "Article 32",
                 "title": "Competence of the Court",
                 "content": "1. The Court shall have exclusive competence in respect of: (a) actions for actual or threatened infringements of patents and supplementary protection certificates and related defences, including counterclaims concerning licences; (b) actions for declarations of non-infringement of patents and supplementary protection certificates; (c) actions for provisional and protective measures and injunctions; (d) actions for revocation of patents and for declaration of invalidity of supplementary protection certificates; (e) counterclaims for revocation of patents and for declaration of invalidity of supplementary protection certificates; (f) actions for damages or compensation derived from the provisional protection conferred by a published European patent application; (g) actions relating to the use of the invention prior to the granting of the patent or to the right based on prior use of the invention; (h) actions for compensation for licences on the basis of Article 8 of Regulation (EU) No 1257/2012.",
@@ -136,7 +126,8 @@ async def lifespan(app: FastAPI):
                 "cross_references": ["Article 33", "Article 34", "Rule 13"],
                 "keywords": ["competence", "infringement", "revocation", "provisional measures", "damages"],
                 "created_date": "2025-01-11",
-                "last_updated": "2025-01-11"
+                "last_updated": "2025-01-11",
+                "is_editable": True
             }
         ]
         
@@ -274,11 +265,16 @@ class ApportModel(BaseModel):
     regulation: str
     citation: str
 
-# UPC Legal Text Models
+# Enhanced UPC Legal Text Models
 class UPCTextModel(BaseModel):
     id: str
     document_type: str  # "rules_of_procedure", "upc_agreement", "statute", "fees"
-    section: str  # "Part I", "Chapter 1", etc.
+    part_number: Optional[str] = None
+    part_title: Optional[str] = None
+    chapter_number: Optional[str] = None
+    chapter_title: Optional[str] = None
+    section_number: Optional[str] = None
+    section_title: Optional[str] = None
     article_number: str  # "Rule 1", "Article 3", etc.
     title: str
     content: str
@@ -287,6 +283,32 @@ class UPCTextModel(BaseModel):
     keywords: List[str] = []
     created_date: str
     last_updated: str
+    is_editable: bool = True
+
+class UPCTextCreateModel(BaseModel):
+    document_type: str
+    part_number: Optional[str] = None
+    part_title: Optional[str] = None
+    chapter_number: Optional[str] = None
+    chapter_title: Optional[str] = None
+    section_number: Optional[str] = None
+    section_title: Optional[str] = None
+    article_number: str
+    title: str
+    content: str
+    language: str = "EN"
+    keywords: List[str] = []
+
+class UPCTextUpdateModel(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    keywords: Optional[List[str]] = None
+
+class ROPImportModel(BaseModel):
+    overwrite_existing: bool = False
+    import_preamble: bool = True
+    import_application_rules: bool = True
+    import_content: bool = True
 
 class LinkedCaseModel(BaseModel):
     case_id: str
@@ -930,7 +952,7 @@ async def update_setting(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# UPC/JUB Code Management endpoints
+# Enhanced UPC/JUB Code Management endpoints
 @app.get("/api/admin/upc-texts", response_model=List[UPCTextModel])
 async def get_upc_texts(
     skip: int = Query(0, ge=0),
@@ -948,7 +970,9 @@ async def get_upc_texts(
                 {"title": {"$regex": search, "$options": "i"}},
                 {"content": {"$regex": search, "$options": "i"}},
                 {"article_number": {"$regex": search, "$options": "i"}},
-                {"section": {"$regex": search, "$options": "i"}}
+                {"part_title": {"$regex": search, "$options": "i"}},
+                {"chapter_title": {"$regex": search, "$options": "i"}},
+                {"section_title": {"$regex": search, "$options": "i"}}
             ]
         
         if document_type:
@@ -965,7 +989,7 @@ async def get_upc_texts(
 
 @app.post("/api/admin/upc-texts")
 async def create_upc_text(
-    text_data: UPCTextModel,
+    text_data: UPCTextCreateModel,
     current_user: UserInDB = Depends(get_admin_user)
 ):
     """Create a new UPC legal text (admin only)"""
@@ -974,6 +998,10 @@ async def create_upc_text(
         text_dict["_id"] = str(uuid.uuid4())
         text_dict["created_date"] = datetime.utcnow().isoformat()
         text_dict["last_updated"] = datetime.utcnow().isoformat()
+        text_dict["is_editable"] = True
+        
+        # Detect cross-references automatically
+        text_dict["cross_references"] = detect_cross_references(text_dict["content"])
         
         result = upc_texts_collection.insert_one(text_dict)
         
@@ -987,17 +1015,34 @@ async def create_upc_text(
 @app.put("/api/admin/upc-texts/{text_id}")
 async def update_upc_text(
     text_id: str,
-    text_data: UPCTextModel,
+    text_data: UPCTextUpdateModel,
     current_user: UserInDB = Depends(get_admin_user)
 ):
     """Update a UPC legal text (admin only)"""
     try:
-        text_dict = text_data.dict()
-        text_dict["last_updated"] = datetime.utcnow().isoformat()
+        # Check if text exists and is editable
+        existing_text = upc_texts_collection.find_one({"_id": text_id})
+        if not existing_text:
+            raise HTTPException(status_code=404, detail="Text not found")
+        
+        if not existing_text.get("is_editable", True):
+            raise HTTPException(status_code=400, detail="This text is not editable")
+        
+        update_dict = {}
+        if text_data.title is not None:
+            update_dict["title"] = text_data.title
+        if text_data.content is not None:
+            update_dict["content"] = text_data.content
+            # Update cross-references automatically when content changes
+            update_dict["cross_references"] = detect_cross_references(text_data.content)
+        if text_data.keywords is not None:
+            update_dict["keywords"] = text_data.keywords
+        
+        update_dict["last_updated"] = datetime.utcnow().isoformat()
         
         result = upc_texts_collection.update_one(
             {"_id": text_id},
-            {"$set": text_dict}
+            {"$set": update_dict}
         )
         
         if result.matched_count == 0:
@@ -1017,6 +1062,14 @@ async def delete_upc_text(
 ):
     """Delete a UPC legal text (admin only)"""
     try:
+        # Check if text exists and is editable
+        existing_text = upc_texts_collection.find_one({"_id": text_id})
+        if not existing_text:
+            raise HTTPException(status_code=404, detail="Text not found")
+        
+        if not existing_text.get("is_editable", True):
+            raise HTTPException(status_code=400, detail="This text cannot be deleted")
+        
         result = upc_texts_collection.delete_one({"_id": text_id})
         
         if result.deleted_count == 0:
@@ -1025,6 +1078,166 @@ async def delete_upc_text(
         return {"message": "Text deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ROP Import endpoint
+@app.post("/api/admin/import-rop")
+async def import_rop_data(
+    import_params: ROPImportModel,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Import Rules of Procedure from JSON file (admin only)"""
+    try:
+        # Path to the ROP JSON file
+        rop_file_path = os.path.join(os.path.dirname(__file__), "Ressources", "rop.json")
+        
+        if not os.path.exists(rop_file_path):
+            raise HTTPException(status_code=404, detail="ROP JSON file not found")
+        
+        # Load the JSON data
+        with open(rop_file_path, 'r', encoding='utf-8') as f:
+            rop_data = json.load(f)
+        
+        imported_count = 0
+        skipped_count = 0
+        
+        # Clear existing Rules of Procedure if overwrite is requested
+        if import_params.overwrite_existing:
+            upc_texts_collection.delete_many({"document_type": "rules_of_procedure"})
+        
+        # Import preamble
+        if import_params.import_preamble and "preamble" in rop_data:
+            preamble_content = "\n".join(rop_data["preamble"])
+            preamble_doc = {
+                "_id": str(uuid.uuid4()),
+                "document_type": "rules_of_procedure",
+                "part_number": None,
+                "part_title": None,
+                "chapter_number": None,
+                "chapter_title": None,
+                "section_number": None,
+                "section_title": None,
+                "article_number": "Preamble",
+                "title": "Preamble to the Rules of Procedure",
+                "content": preamble_content,
+                "language": "EN",
+                "cross_references": detect_cross_references(preamble_content),
+                "keywords": ["preamble", "principles", "procedure", "court"],
+                "created_date": datetime.utcnow().isoformat(),
+                "last_updated": datetime.utcnow().isoformat(),
+                "is_editable": True
+            }
+            upc_texts_collection.insert_one(preamble_doc)
+            imported_count += 1
+        
+        # Import application and interpretation rules
+        if import_params.import_application_rules and "application_and_interpretation" in rop_data:
+            app_content = "\n".join(rop_data["application_and_interpretation"])
+            app_doc = {
+                "_id": str(uuid.uuid4()),
+                "document_type": "rules_of_procedure",
+                "part_number": None,
+                "part_title": None,
+                "chapter_number": None,
+                "chapter_title": None,
+                "section_number": None,
+                "section_title": None,
+                "article_number": "Application and Interpretation",
+                "title": "Application of the Rules and General Principles of Interpretation",
+                "content": app_content,
+                "language": "EN",
+                "cross_references": detect_cross_references(app_content),
+                "keywords": ["application", "interpretation", "rules", "principles"],
+                "created_date": datetime.utcnow().isoformat(),
+                "last_updated": datetime.utcnow().isoformat(),
+                "is_editable": True
+            }
+            upc_texts_collection.insert_one(app_doc)
+            imported_count += 1
+        
+        # Import structured content
+        if import_params.import_content and "content" in rop_data:
+            for part in rop_data["content"]:
+                part_number = part.get("part_number")
+                part_title = part.get("part_title")
+                
+                for chapter in part.get("chapters", []):
+                    chapter_number = chapter.get("chapter_number")
+                    chapter_title = chapter.get("chapter_title")
+                    
+                    for section in chapter.get("sections", []):
+                        section_number = section.get("section_number")
+                        section_title = section.get("section_title")
+                        
+                        for rule in section.get("rules", []):
+                            rule_number = rule.get("rule_number")
+                            rule_title = rule.get("rule_title")
+                            
+                            # Combine rule content with paragraphs
+                            content_parts = []
+                            if rule_title:
+                                content_parts.append(rule_title)
+                            
+                            paragraphs = rule.get("paragraphs", [])
+                            if paragraphs:
+                                content_parts.extend(paragraphs)
+                            
+                            rule_content = "\n".join(content_parts)
+                            
+                            # Skip if content is empty
+                            if not rule_content.strip():
+                                skipped_count += 1
+                                continue
+                            
+                            # Check if rule already exists (if not overwriting)
+                            if not import_params.overwrite_existing:
+                                existing = upc_texts_collection.find_one({
+                                    "document_type": "rules_of_procedure",
+                                    "article_number": f"Rule {rule_number}"
+                                })
+                                if existing:
+                                    skipped_count += 1
+                                    continue
+                            
+                            rule_doc = {
+                                "_id": str(uuid.uuid4()),
+                                "document_type": "rules_of_procedure",
+                                "part_number": part_number,
+                                "part_title": part_title,
+                                "chapter_number": chapter_number,
+                                "chapter_title": chapter_title,
+                                "section_number": section_number,
+                                "section_title": section_title,
+                                "article_number": f"Rule {rule_number}",
+                                "title": rule_title or f"Rule {rule_number}",
+                                "content": rule_content,
+                                "language": "EN",
+                                "cross_references": detect_cross_references(rule_content),
+                                "keywords": [
+                                    "rule", "procedure", 
+                                    part_title.lower() if part_title else "",
+                                    chapter_title.lower() if chapter_title else "",
+                                    section_title.lower() if section_title else ""
+                                ],
+                                "created_date": datetime.utcnow().isoformat(),
+                                "last_updated": datetime.utcnow().isoformat(),
+                                "is_editable": True
+                            }
+                            
+                            # Clean up empty keywords
+                            rule_doc["keywords"] = [k for k in rule_doc["keywords"] if k.strip()]
+                            
+                            upc_texts_collection.insert_one(rule_doc)
+                            imported_count += 1
+        
+        return {
+            "message": "ROP data imported successfully",
+            "imported_count": imported_count,
+            "skipped_count": skipped_count,
+            "total_processed": imported_count + skipped_count
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error importing ROP data: {str(e)}")
 
 # User Management and Permissions endpoints
 @app.get("/api/admin/users")
@@ -1306,16 +1519,31 @@ async def get_statistics():
 @app.get("/api/upc-texts")
 async def get_upc_texts(
     document_type: Optional[str] = Query(None),
-    section: Optional[str] = Query(None),
-    language: str = Query("EN")
+    part_number: Optional[str] = Query(None),
+    chapter_number: Optional[str] = Query(None),
+    section_number: Optional[str] = Query(None),
+    language: str = Query("EN"),
+    search: Optional[str] = Query(None)
 ):
     """Get UPC legal texts with optional filtering"""
     try:
         query = {"language": language}
+        
         if document_type:
             query["document_type"] = document_type
-        if section:
-            query["section"] = section
+        if part_number:
+            query["part_number"] = part_number
+        if chapter_number:
+            query["chapter_number"] = chapter_number
+        if section_number:
+            query["section_number"] = section_number
+        
+        if search:
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"content": {"$regex": search, "$options": "i"}},
+                {"article_number": {"$regex": search, "$options": "i"}}
+            ]
         
         texts = list(upc_texts_collection.find(query).sort("article_number", 1))
         for text in texts:
@@ -1329,24 +1557,80 @@ async def get_upc_texts(
 async def get_upc_structure(language: str = Query("EN")):
     """Get the hierarchical structure of UPC texts"""
     try:
-        # Get all document types and their sections
+        # Get all document types and their structure
         pipeline = [
             {"$match": {"language": language}},
             {"$group": {
-                "_id": "$document_type",
-                "sections": {"$addToSet": "$section"},
+                "_id": {
+                    "document_type": "$document_type",
+                    "part_number": "$part_number",
+                    "part_title": "$part_title",
+                    "chapter_number": "$chapter_number",
+                    "chapter_title": "$chapter_title",
+                    "section_number": "$section_number",
+                    "section_title": "$section_title"
+                },
+                "rules": {"$push": {
+                    "id": {"$toString": "$_id"},
+                    "article_number": "$article_number",
+                    "title": "$title"
+                }},
                 "count": {"$sum": 1}
-            }}
+            }},
+            {"$sort": {"_id.part_number": 1, "_id.chapter_number": 1, "_id.section_number": 1}}
         ]
         
         result = list(upc_texts_collection.aggregate(pipeline))
         
+        # Organize into hierarchical structure
         structure = {}
         for doc in result:
-            structure[doc["_id"]] = {
-                "sections": doc["sections"],
-                "count": doc["count"]
-            }
+            doc_type = doc["_id"]["document_type"]
+            if doc_type not in structure:
+                structure[doc_type] = {"parts": {}, "total_count": 0}
+            
+            part_num = doc["_id"]["part_number"]
+            if part_num:
+                if part_num not in structure[doc_type]["parts"]:
+                    structure[doc_type]["parts"][part_num] = {
+                        "title": doc["_id"]["part_title"],
+                        "chapters": {},
+                        "count": 0
+                    }
+                
+                chapter_num = doc["_id"]["chapter_number"]
+                if chapter_num:
+                    if chapter_num not in structure[doc_type]["parts"][part_num]["chapters"]:
+                        structure[doc_type]["parts"][part_num]["chapters"][chapter_num] = {
+                            "title": doc["_id"]["chapter_title"],
+                            "sections": {},
+                            "count": 0
+                        }
+                    
+                    section_num = doc["_id"]["section_number"]
+                    if section_num:
+                        structure[doc_type]["parts"][part_num]["chapters"][chapter_num]["sections"][section_num] = {
+                            "title": doc["_id"]["section_title"],
+                            "rules": doc["rules"],
+                            "count": doc["count"]
+                        }
+                        structure[doc_type]["parts"][part_num]["chapters"][chapter_num]["count"] += doc["count"]
+                    else:
+                        structure[doc_type]["parts"][part_num]["chapters"][chapter_num]["rules"] = doc["rules"]
+                        structure[doc_type]["parts"][part_num]["chapters"][chapter_num]["count"] += doc["count"]
+                    
+                    structure[doc_type]["parts"][part_num]["count"] += doc["count"]
+                else:
+                    structure[doc_type]["parts"][part_num]["rules"] = doc["rules"]
+                    structure[doc_type]["parts"][part_num]["count"] += doc["count"]
+            else:
+                # Direct rules under document type
+                if "rules" not in structure[doc_type]:
+                    structure[doc_type]["rules"] = []
+                structure[doc_type]["rules"].extend(doc["rules"])
+                structure[doc_type]["direct_count"] = doc["count"]
+            
+            structure[doc_type]["total_count"] += doc["count"]
         
         return structure
     except Exception as e:
