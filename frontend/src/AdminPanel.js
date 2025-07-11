@@ -511,7 +511,14 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
         </div>
 
         {/* Content */}
-        <div className="flex h-[calc(90vh-120px)]">
+        {activeView === 'advanced' ? (
+          <AdminTabs 
+            onClose={() => setActiveView('cases')}
+            backendUrl={backendUrl}
+            getAuthHeaders={getAuthHeaders}
+          />
+        ) : (
+          <div className="flex h-[calc(90vh-120px)]">
           {/* Sidebar */}
           <div className="w-80 border-r border-gray-200 p-6 overflow-y-auto bg-gray-50">
             <div className="space-y-6">
