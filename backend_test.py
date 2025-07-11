@@ -1493,7 +1493,7 @@ def run_tests():
     # Create a test suite
     suite = unittest.TestSuite()
     
-    # Add test methods - focusing on authentication system
+    # Add test methods - focusing on enhanced authentication system and new features
     test_cases = [
         'test_01_health_check',
         'test_19_user_registration',
@@ -1504,7 +1504,15 @@ def run_tests():
         'test_24_get_excluded_cases_admin',
         'test_25_verify_excluded_cases_not_in_public_api',
         'test_26_unauthorized_access_to_admin_endpoints',
-        'test_27_authentication_system_workflow'
+        'test_27_authentication_system_workflow',
+        'test_28_create_editor_user',
+        'test_29_editor_submit_change',
+        'test_30_admin_direct_change',
+        'test_31_newsletter_subscribers',
+        'test_32_send_newsletter',
+        'test_33_get_settings',
+        'test_34_update_settings',
+        'test_35_enhanced_authentication_workflow'
     ]
     
     # Track results for each test
@@ -1531,7 +1539,7 @@ def run_tests():
         for failure in result.failures:
             print(f"   FAILURE: {failure[0]} - {failure[1]}")
     else:
-        print("\n✅ All tests passed! UPC Code system is working correctly.")
+        print("\n✅ All tests passed! Enhanced authentication system and new features are working correctly.")
     
     return len(result.errors) == 0 and len(result.failures) == 0
 
