@@ -745,22 +745,397 @@ class UPCLegalAPITester(unittest.TestCase):
             print(f"❌ UPC Code system workflow error: {str(e)}")
             return False
 
+    def test_19_user_registration(self):
+        """Test user registration endpoint"""
+        print("\n🔍 Testing user registration...")
+        try:
+            # Create a new user with realistic data
+            user_data = {
+                "email": "sarah.johnson@lawfirm.com",
+                "username": "sarah_johnson",
+                "password": "SecurePass123!",
+                "profile": "professional",
+                "newsletter_opt_in": True
+            }
+            
+            response = self.session.post(f"{self.api_url}/auth/register", 
+                                       json=user_data, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            
+            user_response = response.json()
+            required_fields = ["id", "email", "username", "role", "profile", "newsletter_opt_in", "created_at"]
+            for field in required_fields:
+                self.assertIn(field, user_response)
+            
+            self.assertEqual(user_response["email"], user_data["email"])
+            self.assertEqual(user_response["username"], user_data["username"])
+            self.assertEqual(user_response["role"], "user")
+            self.assertEqual(user_response["profile"], "professional")
+            self.assertEqual(user_response["newsletter_opt_in"], True)
+            
+            print(f"✅ User registration successful for {user_data['email']}")
+            return user_data
+        except Exception as e:
+            print(f"❌ User registration error: {str(e)}")
+            return False
+
+    def test_20_user_login(self):
+        """Test user login endpoint"""
+        print("\n🔍 Testing user login...")
+        try:
+            # First register a user if not already done
+            user_data = self.test_19_user_registration()
+            if not user_data:
+                print("⚠️ Could not register user for login test")
+                return False
+            
+            # Login with the registered user
+            login_data = {
+                "email": user_data["email"],
+                "password": user_data["password"]
+            }
+            
+            response = self.session.post(f"{self.api_url}/auth/login", 
+                                       json=login_data, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            
+            token_response = response.json()
+            self.assertIn("access_token", token_response)
+            self.assertIn("token_type", token_response)
+            self.assertEqual(token_response["token_type"], "bearer")
+            
+            # Store token for future authenticated requests
+            self.user_token = token_response["access_token"]
+            
+            print(f"✅ User login successful for {login_data['email']}")
+            return token_response["access_token"]
+        except Exception as e:
+            print(f"❌ User login error: {str(e)}")
+            return False
+
+    def test_21_get_current_user_info(self):
+        """Test getting current user info with JWT token"""
+        print("\n🔍 Testing get current user info...")
+        try:
+            # Get token from login test
+            token = self.test_20_user_login()
+            if not token:
+                print("⚠️ Could not get authentication token")
+                return False
+            
+            # Make authenticated request
+            headers = {"Authorization": f"Bearer {token}"}
+            response = self.session.get(f"{self.api_url}/auth/me", 
+                                      headers=headers, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            
+            user_info = response.json()
+            required_fields = ["id", "email", "username", "role", "profile", "newsletter_opt_in", "created_at"]
+            for field in required_fields:
+                self.assertIn(field, user_info)
+            
+            self.assertEqual(user_info["email"], "sarah.johnson@lawfirm.com")
+            self.assertEqual(user_info["username"], "sarah_johnson")
+            self.assertEqual(user_info["role"], "user")
+            
+            print(f"✅ Current user info retrieved successfully")
+            return True
+        except Exception as e:
+            print(f"❌ Get current user info error: {str(e)}")
+            return False
+
+    def test_22_admin_login(self):
+        """Test admin login with predefined credentials"""
+        print("\n🔍 Testing admin login...")
+        try:
+            # Login with admin credentials
+            admin_login_data = {
+                "email": "admin@romulus.com",
+                "password": "admin123"
+            }
+            
+            response = self.session.post(f"{self.api_url}/auth/login", 
+                                       json=admin_login_data, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            
+            token_response = response.json()
+            self.assertIn("access_token", token_response)
+            self.assertIn("token_type", token_response)
+            self.assertEqual(token_response["token_type"], "bearer")
+            
+            # Store admin token for future admin requests
+            self.admin_token = token_response["access_token"]
+            
+            # Verify admin user info
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            user_response = self.session.get(f"{self.api_url}/auth/me", 
+                                           headers=headers, timeout=self.timeout)
+            self.assertEqual(user_response.status_code, 200)
+            
+            admin_info = user_response.json()
+            self.assertEqual(admin_info["email"], "admin@romulus.com")
+            self.assertEqual(admin_info["role"], "admin")
+            
+            print(f"✅ Admin login successful")
+            return self.admin_token
+        except Exception as e:
+            print(f"❌ Admin login error: {str(e)}")
+            return False
+
+    def test_23_exclude_case_admin(self):
+        """Test excluding a case with admin privileges"""
+        print("\n🔍 Testing case exclusion with admin privileges...")
+        try:
+            # Get admin token
+            admin_token = self.test_22_admin_login()
+            if not admin_token:
+                print("⚠️ Could not get admin token")
+                return False
+            
+            # Get a case to exclude
+            response = self.session.get(f"{self.api_url}/cases", params={"limit": 1}, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            cases = response.json()
+            
+            if not cases:
+                print("⚠️ No cases found to exclude")
+                return False
+            
+            case = cases[0]
+            case_id = case["id"]
+            
+            # Exclude the case
+            exclusion_data = {
+                "excluded": True,
+                "exclusion_reason": "Case contains sensitive information and should not be publicly accessible"
+            }
+            
+            headers = {"Authorization": f"Bearer {admin_token}"}
+            exclude_response = self.session.put(f"{self.api_url}/admin/cases/{case_id}/exclude", 
+                                              json=exclusion_data, headers=headers, timeout=self.timeout)
+            self.assertEqual(exclude_response.status_code, 200)
+            
+            updated_case = exclude_response.json()
+            self.assertEqual(updated_case["excluded"], True)
+            self.assertEqual(updated_case["exclusion_reason"], exclusion_data["exclusion_reason"])
+            
+            print(f"✅ Case {case_id} excluded successfully")
+            return case_id
+        except Exception as e:
+            print(f"❌ Case exclusion error: {str(e)}")
+            return False
+
+    def test_24_get_excluded_cases_admin(self):
+        """Test getting excluded cases (admin only)"""
+        print("\n🔍 Testing get excluded cases (admin only)...")
+        try:
+            # Get admin token
+            admin_token = self.test_22_admin_login()
+            if not admin_token:
+                print("⚠️ Could not get admin token")
+                return False
+            
+            # Ensure we have at least one excluded case
+            excluded_case_id = self.test_23_exclude_case_admin()
+            if not excluded_case_id:
+                print("⚠️ Could not exclude a case for testing")
+                return False
+            
+            # Get excluded cases
+            headers = {"Authorization": f"Bearer {admin_token}"}
+            response = self.session.get(f"{self.api_url}/admin/cases/excluded", 
+                                      headers=headers, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            
+            excluded_cases = response.json()
+            self.assertIsInstance(excluded_cases, list)
+            self.assertGreater(len(excluded_cases), 0, "Expected at least one excluded case")
+            
+            # Verify all returned cases are excluded
+            for case in excluded_cases:
+                self.assertEqual(case["excluded"], True)
+                self.assertIn("exclusion_reason", case)
+            
+            print(f"✅ Retrieved {len(excluded_cases)} excluded cases")
+            return True
+        except Exception as e:
+            print(f"❌ Get excluded cases error: {str(e)}")
+            return False
+
+    def test_25_verify_excluded_cases_not_in_public_api(self):
+        """Test that excluded cases are not returned in public API"""
+        print("\n🔍 Testing excluded cases are not in public API...")
+        try:
+            # Ensure we have an excluded case
+            excluded_case_id = self.test_23_exclude_case_admin()
+            if not excluded_case_id:
+                print("⚠️ Could not exclude a case for testing")
+                return False
+            
+            # Get cases without include_excluded parameter (default behavior)
+            response = self.session.get(f"{self.api_url}/cases", timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            public_cases = response.json()
+            
+            # Verify excluded case is not in public results
+            excluded_case_found = False
+            for case in public_cases:
+                if case["id"] == excluded_case_id:
+                    excluded_case_found = True
+                    break
+            
+            self.assertFalse(excluded_case_found, "Excluded case should not appear in public API")
+            
+            # Test with include_excluded=false explicitly
+            response = self.session.get(f"{self.api_url}/cases", 
+                                      params={"include_excluded": False}, timeout=self.timeout)
+            self.assertEqual(response.status_code, 200)
+            filtered_cases = response.json()
+            
+            excluded_case_found = False
+            for case in filtered_cases:
+                if case["id"] == excluded_case_id:
+                    excluded_case_found = True
+                    break
+            
+            self.assertFalse(excluded_case_found, "Excluded case should not appear when include_excluded=false")
+            
+            print(f"✅ Excluded cases properly filtered from public API")
+            return True
+        except Exception as e:
+            print(f"❌ Public API exclusion test error: {str(e)}")
+            return False
+
+    def test_26_unauthorized_access_to_admin_endpoints(self):
+        """Test that admin endpoints are protected from unauthorized access"""
+        print("\n🔍 Testing unauthorized access to admin endpoints...")
+        try:
+            # Try to access admin endpoints without token
+            case_id = "test-case-id"
+            
+            # Test exclude endpoint without auth
+            exclusion_data = {"excluded": True, "exclusion_reason": "Test"}
+            response = self.session.put(f"{self.api_url}/admin/cases/{case_id}/exclude", 
+                                      json=exclusion_data, timeout=self.timeout)
+            self.assertEqual(response.status_code, 401, "Should return 401 Unauthorized")
+            
+            # Test get excluded cases without auth
+            response = self.session.get(f"{self.api_url}/admin/cases/excluded", timeout=self.timeout)
+            self.assertEqual(response.status_code, 401, "Should return 401 Unauthorized")
+            
+            # Test with regular user token (not admin)
+            user_token = self.test_20_user_login()
+            if user_token:
+                headers = {"Authorization": f"Bearer {user_token}"}
+                
+                # Try exclude endpoint with user token
+                response = self.session.put(f"{self.api_url}/admin/cases/{case_id}/exclude", 
+                                          json=exclusion_data, headers=headers, timeout=self.timeout)
+                self.assertEqual(response.status_code, 403, "Should return 403 Forbidden for non-admin")
+                
+                # Try get excluded cases with user token
+                response = self.session.get(f"{self.api_url}/admin/cases/excluded", 
+                                          headers=headers, timeout=self.timeout)
+                self.assertEqual(response.status_code, 403, "Should return 403 Forbidden for non-admin")
+            
+            print(f"✅ Admin endpoints properly protected from unauthorized access")
+            return True
+        except Exception as e:
+            print(f"❌ Unauthorized access test error: {str(e)}")
+            return False
+
+    def test_27_authentication_system_workflow(self):
+        """Test complete authentication system workflow"""
+        print("\n🔍 Testing complete authentication system workflow...")
+        try:
+            # 1. Register new user
+            user_data = {
+                "email": "michael.chen@university.edu",
+                "username": "michael_chen",
+                "password": "AcademicPass456!",
+                "profile": "academic",
+                "newsletter_opt_in": False
+            }
+            
+            register_response = self.session.post(f"{self.api_url}/auth/register", 
+                                                json=user_data, timeout=self.timeout)
+            self.assertEqual(register_response.status_code, 200)
+            
+            # 2. Login with new user
+            login_data = {"email": user_data["email"], "password": user_data["password"]}
+            login_response = self.session.post(f"{self.api_url}/auth/login", 
+                                             json=login_data, timeout=self.timeout)
+            self.assertEqual(login_response.status_code, 200)
+            user_token = login_response.json()["access_token"]
+            
+            # 3. Access protected endpoint with user token
+            headers = {"Authorization": f"Bearer {user_token}"}
+            me_response = self.session.get(f"{self.api_url}/auth/me", 
+                                         headers=headers, timeout=self.timeout)
+            self.assertEqual(me_response.status_code, 200)
+            user_info = me_response.json()
+            self.assertEqual(user_info["email"], user_data["email"])
+            
+            # 4. Admin login
+            admin_login = {"email": "admin@romulus.com", "password": "admin123"}
+            admin_response = self.session.post(f"{self.api_url}/auth/login", 
+                                             json=admin_login, timeout=self.timeout)
+            self.assertEqual(admin_response.status_code, 200)
+            admin_token = admin_response.json()["access_token"]
+            
+            # 5. Admin operations
+            admin_headers = {"Authorization": f"Bearer {admin_token}"}
+            
+            # Get a case and exclude it
+            cases_response = self.session.get(f"{self.api_url}/cases", params={"limit": 1})
+            if cases_response.status_code == 200 and cases_response.json():
+                case_id = cases_response.json()[0]["id"]
+                
+                exclusion_data = {
+                    "excluded": True,
+                    "exclusion_reason": "Workflow test exclusion"
+                }
+                
+                exclude_response = self.session.put(f"{self.api_url}/admin/cases/{case_id}/exclude", 
+                                                  json=exclusion_data, headers=admin_headers)
+                self.assertEqual(exclude_response.status_code, 200)
+                
+                # Verify exclusion
+                excluded_response = self.session.get(f"{self.api_url}/admin/cases/excluded", 
+                                                   headers=admin_headers)
+                self.assertEqual(excluded_response.status_code, 200)
+                excluded_cases = excluded_response.json()
+                self.assertGreater(len(excluded_cases), 0)
+            
+            print("✅ Complete authentication system workflow successful")
+            print("  - User registration ✓")
+            print("  - User login ✓")
+            print("  - JWT token authentication ✓")
+            print("  - Admin login ✓")
+            print("  - Admin case exclusion ✓")
+            print("  - Protected endpoint access ✓")
+            
+            return True
+        except Exception as e:
+            print(f"❌ Authentication workflow error: {str(e)}")
+            return False
+
 def run_tests():
     # Create a test suite
     suite = unittest.TestSuite()
     
-    # Add test methods - focusing on UPC Code system
+    # Add test methods - focusing on authentication system
     test_cases = [
         'test_01_health_check',
-        'test_02_get_cases',
-        'test_04_get_cases_count',
-        'test_05_get_filters',
-        'test_13_upc_texts_endpoint',
-        'test_14_upc_texts_structure_endpoint',
-        'test_15_add_apport_to_case',
-        'test_16_upc_texts_linked_cases_endpoint',
-        'test_17_upc_texts_filtering',
-        'test_18_upc_code_system_workflow'
+        'test_19_user_registration',
+        'test_20_user_login',
+        'test_21_get_current_user_info',
+        'test_22_admin_login',
+        'test_23_exclude_case_admin',
+        'test_24_get_excluded_cases_admin',
+        'test_25_verify_excluded_cases_not_in_public_api',
+        'test_26_unauthorized_access_to_admin_endpoints',
+        'test_27_authentication_system_workflow'
     ]
     
     # Track results for each test
