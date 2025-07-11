@@ -1715,7 +1715,9 @@ def run_tests():
         'test_32_send_newsletter',
         'test_33_get_settings',
         'test_34_update_settings',
-        'test_35_enhanced_authentication_workflow'
+        'test_35_enhanced_authentication_workflow',
+        'test_36_rop_import_system',
+        'test_37_upc_text_editing_system'
     ]
     
     # Track results for each test
