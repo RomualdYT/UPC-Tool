@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { generateBreadcrumbStructuredData } from './StructuredData';
 import MetaTags from './MetaTags';
 
@@ -63,29 +64,40 @@ const Breadcrumb = ({ customBreadcrumbs = [] }) => {
   return (
     <>
       <MetaTags structuredData={structuredData} />
-      <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-        {breadcrumbs.map((crumb, index) => (
-          <React.Fragment key={crumb.url}>
-            {index > 0 && (
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-            )}
-            {index === breadcrumbs.length - 1 ? (
-              <span className="text-gray-900 font-medium flex items-center space-x-1">
-                {crumb.icon && <crumb.icon className="h-4 w-4" />}
-                <span>{crumb.name}</span>
-              </span>
-            ) : (
-              <Link
-                to={crumb.url}
-                className="text-orange-600 hover:text-orange-700 transition-colors flex items-center space-x-1"
-              >
-                {crumb.icon && <crumb.icon className="h-4 w-4" />}
-                <span>{crumb.name}</span>
-              </Link>
-            )}
-          </React.Fragment>
-        ))}
-      </nav>
+      <motion.nav 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        aria-label="Breadcrumb" 
+        className="bg-white/80 backdrop-blur-sm rounded-lg border border-orange-200 shadow-sm mb-6"
+      >
+        <div className="px-4 py-3">
+          <ol className="flex items-center space-x-2 text-sm">
+            {breadcrumbs.map((crumb, index) => (
+              <li key={crumb.url} className="flex items-center">
+                {index > 0 && (
+                  <ChevronRight className="h-4 w-4 text-orange-400 mx-2 flex-shrink-0" />
+                )}
+                
+                {index === breadcrumbs.length - 1 ? (
+                  <span className="text-orange-900 font-semibold flex items-center space-x-2 bg-orange-50 px-3 py-1.5 rounded-md border border-orange-200">
+                    {crumb.icon && <crumb.icon className="h-4 w-4 text-orange-600" />}
+                    <span>{crumb.name}</span>
+                  </span>
+                ) : (
+                  <Link
+                    to={crumb.url}
+                    className="text-orange-600 hover:text-orange-800 transition-colors font-medium flex items-center space-x-2 px-3 py-1.5 rounded-md hover:bg-orange-50 border border-transparent hover:border-orange-200"
+                  >
+                    {crumb.icon && <crumb.icon className="h-4 w-4" />}
+                    <span>{crumb.name}</span>
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </motion.nav>
     </>
   );
 };

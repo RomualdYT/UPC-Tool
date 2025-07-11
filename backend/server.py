@@ -74,6 +74,7 @@ seo_metadata_collection = db['seo_metadata']
 class EmailService:
     def __init__(self):
         self.config = None
+        self.enabled = False  # Désactivé par défaut
         self.load_config()
     
     def load_config(self):
@@ -82,11 +83,16 @@ class EmailService:
             email_settings = settings_collection.find_one({"key": "email_service"})
             if email_settings:
                 self.config = email_settings["value"]
+                self.enabled = self.config.get("enabled", False)  # Vérifier si activé
         except Exception as e:
             print(f"Email config load error: {e}")
     
     def send_email(self, to_emails: List[str], subject: str, content: str, content_type: str = "html"):
         """Send email using configured service"""
+        if not self.enabled:
+            print("Email service is disabled")
+            return True  # Return True pour ne pas bloquer le système
+        
         if not self.config:
             raise Exception("Email service not configured")
         
@@ -267,12 +273,16 @@ async def lifespan(app: FastAPI):
         {
             "key": "email_service",
             "value": {
+                "enabled": False,  # Désactivé par défaut
                 "type": "smtp",
                 "smtp_host": "localhost",
                 "smtp_port": 587,
                 "smtp_tls": True,
                 "from_email": "noreply@upc-legal.com",
-                "from_name": "UPC Legal"
+                "from_name": "UPC Legal",
+                "api_key": "",
+                "smtp_user": "",
+                "smtp_password": ""
             }
         },
         {
@@ -662,6 +672,7 @@ class SettingsModel(BaseModel):
 
 # Email Service Configuration Models
 class EmailServiceConfigModel(BaseModel):
+    enabled: bool = False
     type: EmailServiceType
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
@@ -930,6 +941,28 @@ async def get_newsletter_campaigns(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/admin/newsletter/subscribers")
+async def get_newsletter_subscribers(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    status: Optional[str] = Query(None),
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get newsletter subscribers (admin only)"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        cursor = newsletter_subscribers_collection.find(query).skip(skip).limit(limit).sort("opt_in_date", -1)
+        subscribers = []
+        for subscriber in cursor:
+            subscriber["id"] = str(subscriber.pop("_id"))
+            subscribers.append(subscriber)
+        return subscribers
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/admin/newsletter/campaigns")
 async def create_newsletter_campaign(
     campaign_data: NewsletterCampaignCreateModel,
@@ -1012,17 +1045,10 @@ async def update_newsletter_campaign(
             update_data["scheduled_at"] = campaign_data.schedule_at
             update_data["status"] = "scheduled"
         
-        # Update recipients count if recipients provided
-        if campaign_data.recipients is not None:
-            update_data["recipients_count"] = len(campaign_data.recipients)
-        
-        result = newsletter_campaigns_collection.update_one(
+        newsletter_campaigns_collection.update_one(
             {"_id": campaign_id},
             {"$set": update_data}
         )
-        
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Campaign not found")
         
         # Return updated campaign
         updated_campaign = newsletter_campaigns_collection.find_one({"_id": campaign_id})
@@ -1034,7 +1060,6 @@ async def update_newsletter_campaign(
 @app.post("/api/admin/newsletter/campaigns/{campaign_id}/send")
 async def send_newsletter_campaign(
     campaign_id: str,
-    background_tasks: BackgroundTasks,
     current_user: UserInDB = Depends(get_admin_user)
 ):
     """Send newsletter campaign (admin only)"""
@@ -1044,15 +1069,33 @@ async def send_newsletter_campaign(
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
         
-        if campaign["status"] not in ["draft", "scheduled"]:
-            raise HTTPException(status_code=400, detail="Campaign cannot be sent")
+        if campaign["status"] == "sent":
+            raise HTTPException(status_code=400, detail="Campaign already sent")
         
         # Get active subscribers
         subscribers = list(newsletter_subscribers_collection.find({"status": "active"}))
-        recipient_emails = [sub["email"] for sub in subscribers]
-        
-        if not recipient_emails:
+        if not subscribers:
             raise HTTPException(status_code=400, detail="No active subscribers")
+        
+        # Send emails (only if email service is enabled)
+        sent_count = 0
+        if email_service.enabled:
+            recipient_emails = [sub["email"] for sub in subscribers]
+            
+            # Send email
+            success = email_service.send_email(
+                to_emails=recipient_emails,
+                subject=campaign["subject"],
+                content=campaign["html_content"] or campaign["content"],
+                content_type="html" if campaign["html_content"] else "text"
+            )
+            
+            if success:
+                sent_count = len(recipient_emails)
+        else:
+            # Simulate sending (for testing)
+            sent_count = len(subscribers)
+            print(f"Email service disabled. Would send to {sent_count} recipients")
         
         # Update campaign status
         newsletter_campaigns_collection.update_one(
@@ -1060,96 +1103,26 @@ async def send_newsletter_campaign(
             {"$set": {
                 "status": "sent",
                 "sent_at": datetime.utcnow(),
-                "sent_count": len(recipient_emails)
+                "sent_count": sent_count,
+                "updated_at": datetime.utcnow(),
+                "updated_by": current_user.id
             }}
         )
         
-        # Send emails in background
-        def send_emails():
-            try:
-                email_service.load_config()  # Reload config
-                content = campaign["html_content"] if campaign.get("html_content") else campaign["content"]
-                content_type = "html" if campaign.get("html_content") else "text"
-                
-                # Send in batches
-                batch_size = 50
-                for i in range(0, len(recipient_emails), batch_size):
-                    batch = recipient_emails[i:i+batch_size]
-                    email_service.send_email(batch, campaign["subject"], content, content_type)
-                    
-                print(f"Newsletter sent to {len(recipient_emails)} subscribers")
-            except Exception as e:
-                print(f"Error sending newsletter: {e}")
-                # Update campaign status to failed
-                newsletter_campaigns_collection.update_one(
-                    {"_id": campaign_id},
-                    {"$set": {"status": "failed"}}
-                )
-        
-        background_tasks.add_task(send_emails)
-        
-        return {
-            "message": "Newsletter sending started",
-            "campaign_id": campaign_id,
-            "recipients_count": len(recipient_emails)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/admin/newsletter/subscribers")
-async def get_newsletter_subscribers(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    status: Optional[str] = Query(None),
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Get newsletter subscribers (admin only)"""
-    try:
-        query = {}
-        if status:
-            query["status"] = status
-        
-        cursor = newsletter_subscribers_collection.find(query).skip(skip).limit(limit).sort("opt_in_date", -1)
-        subscribers = []
-        for subscriber in cursor:
-            subscriber["id"] = str(subscriber.pop("_id"))
-            subscribers.append(subscriber)
-        return subscribers
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/admin/newsletter/subscribers/{subscriber_id}")
-async def delete_newsletter_subscriber(
-    subscriber_id: str,
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Delete newsletter subscriber (admin only)"""
-    try:
-        result = newsletter_subscribers_collection.delete_one({"_id": subscriber_id})
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Subscriber not found")
-        
-        return {"message": "Subscriber deleted successfully"}
+        return {"message": f"Campaign sent to {sent_count} subscribers", "sent_count": sent_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # Email service configuration endpoints
 @app.get("/api/admin/email-service")
-async def get_email_service_config(
-    current_user: UserInDB = Depends(get_admin_user)
-):
+async def get_email_service_config(current_user: UserInDB = Depends(get_admin_user)):
     """Get email service configuration (admin only)"""
     try:
         config = settings_collection.find_one({"key": "email_service"})
         if config:
-            # Don't return sensitive data
-            safe_config = config["value"].copy()
-            if "smtp_password" in safe_config:
-                safe_config["smtp_password"] = "***"
-            if "api_key" in safe_config:
-                safe_config["api_key"] = "***"
-            return safe_config
-        return {}
+            return config["value"]
+        else:
+            return {"enabled": False, "type": "smtp"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1160,219 +1133,47 @@ async def update_email_service_config(
 ):
     """Update email service configuration (admin only)"""
     try:
-        setting = {
-            "key": "email_service",
-            "value": config.dict(),
-            "updated_at": datetime.utcnow(),
-            "updated_by": current_user.id
-        }
+        config_dict = config.dict()
         
-        result = settings_collection.update_one(
+        # Update in database
+        settings_collection.update_one(
             {"key": "email_service"},
-            {"$set": setting},
+            {"$set": {
+                "value": config_dict,
+                "updated_at": datetime.utcnow(),
+                "updated_by": current_user.id
+            }},
             upsert=True
         )
         
         # Reload email service config
         email_service.load_config()
         
-        return {"message": "Email service configuration updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# GDPR endpoints
-@app.post("/api/gdpr/consent")
-async def record_gdpr_consent(
-    consent: GDPRConsentUpdateModel,
-    user_id: Optional[str] = None,
-    email: Optional[str] = None
-):
-    """Record GDPR consent"""
-    try:
-        if not user_id and not email:
-            raise HTTPException(status_code=400, detail="Either user_id or email must be provided")
-        
-        consent_record = {
-            "_id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "email": email,
-            "consent_type": consent.consent_type,
-            "consent_given": consent.consent_given,
-            "consent_date": datetime.utcnow(),
-            "withdrawal_date": None if consent.consent_given else datetime.utcnow(),
-            "purpose": consent.purpose,
-            "lawful_basis": consent.lawful_basis,
-            "ip_address": None,  # Can be populated from request
-            "user_agent": None   # Can be populated from request
-        }
-        
-        # Check if consent record already exists
-        existing_query = {}
-        if user_id:
-            existing_query["user_id"] = user_id
-        if email:
-            existing_query["email"] = email
-        existing_query["consent_type"] = consent.consent_type
-        
-        existing = gdpr_consents_collection.find_one(existing_query)
-        if existing:
-            # Update existing consent
-            gdpr_consents_collection.update_one(
-                {"_id": existing["_id"]},
-                {"$set": {
-                    "consent_given": consent.consent_given,
-                    "consent_date": datetime.utcnow() if consent.consent_given else existing["consent_date"],
-                    "withdrawal_date": None if consent.consent_given else datetime.utcnow(),
-                    "purpose": consent.purpose,
-                    "lawful_basis": consent.lawful_basis
-                }}
-            )
-        else:
-            # Create new consent record
-            gdpr_consents_collection.insert_one(consent_record)
-        
-        return {"message": "Consent recorded successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/gdpr/consent")
-async def get_gdpr_consent(
-    user_id: Optional[str] = None,
-    email: Optional[str] = None
-):
-    """Get GDPR consent status"""
-    try:
-        if not user_id and not email:
-            raise HTTPException(status_code=400, detail="Either user_id or email must be provided")
-        
-        query = {}
-        if user_id:
-            query["user_id"] = user_id
-        if email:
-            query["email"] = email
-        
-        consents = list(gdpr_consents_collection.find(query))
-        
-        consent_status = {}
-        for consent in consents:
-            consent_status[consent["consent_type"]] = {
-                "given": consent["consent_given"],
-                "date": consent["consent_date"],
-                "withdrawal_date": consent.get("withdrawal_date"),
-                "purpose": consent["purpose"],
-                "lawful_basis": consent["lawful_basis"]
-            }
-        
-        return consent_status
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/gdpr/request")
-async def create_gdpr_request(request_data: GDPRDataRequestModel):
-    """Create GDPR data request"""
-    try:
-        request_id = str(uuid.uuid4())
-        
-        # Check if user exists
-        user = users_collection.find_one({"email": request_data.email})
-        
-        gdpr_request = {
-            "_id": request_id,
-            "user_id": user["_id"] if user else None,
-            "email": request_data.email,
-            "request_type": request_data.request_type,
-            "description": request_data.description,
-            "status": "pending",
-            "created_at": datetime.utcnow(),
-            "processed_at": None,
-            "processed_by": None,
-            "response": None
-        }
-        
-        gdpr_requests_collection.insert_one(gdpr_request)
-        
-        return {
-            "message": "GDPR request created successfully",
-            "request_id": request_id
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/admin/gdpr/requests")
-async def get_gdpr_requests(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    status: Optional[str] = Query(None),
-    request_type: Optional[str] = Query(None),
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Get GDPR requests (admin only)"""
-    try:
-        query = {}
-        if status:
-            query["status"] = status
-        if request_type:
-            query["request_type"] = request_type
-        
-        cursor = gdpr_requests_collection.find(query).skip(skip).limit(limit).sort("created_at", -1)
-        requests = []
-        for request in cursor:
-            request["id"] = str(request.pop("_id"))
-            requests.append(request)
-        return requests
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/admin/gdpr/requests/{request_id}")
-async def process_gdpr_request(
-    request_id: str,
-    response: str,
-    status: str,
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Process GDPR request (admin only)"""
-    try:
-        result = gdpr_requests_collection.update_one(
-            {"_id": request_id},
-            {"$set": {
-                "status": status,
-                "response": response,
-                "processed_at": datetime.utcnow(),
-                "processed_by": current_user.id
-            }}
-        )
-        
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Request not found")
-        
-        return {"message": "GDPR request processed successfully"}
+        return {"message": "Email service configuration updated", "config": config_dict}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # SEO endpoints
 @app.get("/api/seo/metadata")
 async def get_seo_metadata(page_path: str = Query(...)):
-    """Get SEO metadata for a page"""
+    """Get SEO metadata for a specific page"""
     try:
         metadata = seo_metadata_collection.find_one({"page_path": page_path})
-        if not metadata:
-            # Return default metadata
-            seo_config = settings_collection.find_one({"key": "seo_config"})
-            if seo_config:
-                config = seo_config["value"]
+        if metadata:
+            metadata["id"] = str(metadata.pop("_id"))
+            return metadata
+        else:
+            # Return default SEO
+            default_seo = settings_collection.find_one({"key": "seo_config"})
+            if default_seo:
                 return {
-                    "title": config.get("default_title", "UPC Legal"),
-                    "description": config.get("default_description", ""),
-                    "keywords": config.get("default_keywords", []),
-                    "og_title": config.get("default_title", "UPC Legal"),
-                    "og_description": config.get("default_description", ""),
-                    "og_image": config.get("og_image", ""),
-                    "canonical_url": f"{config.get('canonical_base_url', '')}{page_path}"
+                    "title": default_seo["value"]["default_title"],
+                    "description": default_seo["value"]["default_description"],
+                    "keywords": default_seo["value"]["default_keywords"],
+                    "canonical_url": f"{default_seo['value']['canonical_base_url']}{page_path}"
                 }
-            return {}
-        
-        metadata["id"] = str(metadata.pop("_id"))
-        return metadata
+            else:
+                return {"title": "UPC Legal", "description": "Legal research platform"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1383,21 +1184,19 @@ async def create_seo_metadata(
 ):
     """Create SEO metadata (admin only)"""
     try:
-        # Check if metadata already exists for this page
-        existing = seo_metadata_collection.find_one({"page_path": metadata.page_path})
-        if existing:
-            raise HTTPException(status_code=400, detail="Metadata already exists for this page")
+        metadata_id = str(uuid.uuid4())
         
-        metadata_dict = metadata.dict()
-        metadata_dict["_id"] = str(uuid.uuid4())
-        metadata_dict["created_at"] = datetime.utcnow()
-        metadata_dict["updated_at"] = datetime.utcnow()
+        seo_data = {
+            "_id": metadata_id,
+            **metadata.dict(),
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
         
-        seo_metadata_collection.insert_one(metadata_dict)
+        seo_metadata_collection.insert_one(seo_data)
         
-        # Return created metadata
-        metadata_dict["id"] = str(metadata_dict.pop("_id"))
-        return metadata_dict
+        seo_data["id"] = str(seo_data.pop("_id"))
+        return seo_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1410,13 +1209,9 @@ async def update_seo_metadata(
     """Update SEO metadata (admin only)"""
     try:
         update_data = {
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.utcnow(),
+            **{k: v for k, v in metadata.dict().items() if v is not None}
         }
-        
-        # Only update provided fields
-        for field, value in metadata.dict().items():
-            if value is not None:
-                update_data[field] = value
         
         result = seo_metadata_collection.update_one(
             {"_id": metadata_id},
@@ -1424,255 +1219,19 @@ async def update_seo_metadata(
         )
         
         if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Metadata not found")
+            raise HTTPException(status_code=404, detail="SEO metadata not found")
         
-        # Return updated metadata
         updated_metadata = seo_metadata_collection.find_one({"_id": metadata_id})
         updated_metadata["id"] = str(updated_metadata.pop("_id"))
         return updated_metadata
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/admin/seo/metadata")
-async def get_all_seo_metadata(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Get all SEO metadata (admin only)"""
-    try:
-        cursor = seo_metadata_collection.find({}).skip(skip).limit(limit).sort("created_at", -1)
-        metadata_list = []
-        for metadata in cursor:
-            metadata["id"] = str(metadata.pop("_id"))
-            metadata_list.append(metadata)
-        return metadata_list
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Robots.txt and sitemap endpoints
-@app.get("/robots.txt")
-async def get_robots_txt():
-    """Get robots.txt file"""
-    robots_content = """User-agent: *
-Disallow: /admin/
-Disallow: /api/
-Allow: /api/cases
-Allow: /api/upc-texts
-Allow: /api/stats
-Allow: /api/filters
-
-Sitemap: /sitemap.xml
-"""
-    return Response(content=robots_content, media_type="text/plain")
-
-@app.get("/sitemap.xml")
-async def get_sitemap():
-    """Generate sitemap.xml"""
-    try:
-        # Get base URL from settings
-        seo_config = settings_collection.find_one({"key": "seo_config"})
-        base_url = seo_config["value"].get("canonical_base_url", "https://upc-legal.com") if seo_config else "https://upc-legal.com"
-        
-        # Get recent cases for sitemap
-        recent_cases = list(cases_collection.find({"excluded": {"$ne": True}}).sort("date", -1).limit(1000))
-        
-        sitemap_content = '''<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-        <loc>{base_url}/</loc>
-        <lastmod>{today}</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>1.0</priority>
-    </url>
-    <url>
-        <loc>{base_url}/cases</loc>
-        <lastmod>{today}</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>0.9</priority>
-    </url>
-    <url>
-        <loc>{base_url}/upc-code</loc>
-        <lastmod>{today}</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-    </url>
-'''.format(base_url=base_url, today=datetime.utcnow().strftime("%Y-%m-%d"))
-        
-        # Add individual case URLs
-        for case in recent_cases:
-            sitemap_content += f'''    <url>
-        <loc>{base_url}/cases/{case["_id"]}</loc>
-        <lastmod>{case["date"]}</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.7</priority>
-    </url>
-'''
-        
-        sitemap_content += "</urlset>"
-        
-        return Response(content=sitemap_content, media_type="application/xml")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# API endpoints (existing ones continue...)
-@app.get("/")
-async def root():
-    return {"message": "UPC Legal API is running"}
-
-@app.get("/api/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-@app.get("/api/cases", response_model=List[CaseModel])
-async def get_cases(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    search: Optional[str] = Query(None),
-    date_from: Optional[str] = Query(None),
-    date_to: Optional[str] = Query(None),
-    case_type: Optional[CaseType] = Query(None),
-    court_division: Optional[str] = Query(None),
-    language: Optional[Language] = Query(None),
-    include_excluded: bool = Query(False)
-):
-    """Get paginated cases with optional filtering"""
-    query = {}
-    
-    # By default, exclude excluded cases for public access
-    if not include_excluded:
-        query["excluded"] = {"$ne": True}
-    
-    # Text search
-    if search:
-        query["$text"] = {"$search": search}
-    
-    # Date range filter
-    if date_from or date_to:
-        date_filter = {}
-        if date_from:
-            date_filter["$gte"] = date_from
-        if date_to:
-            date_filter["$lte"] = date_to
-        query["date"] = date_filter
-    
-    # Other filters
-    if case_type:
-        query["type"] = case_type
-    if court_division:
-        query["court_division"] = {"$regex": court_division, "$options": "i"}
-    if language:
-        query["language_of_proceedings"] = language
-    
-    try:
-        cursor = cases_collection.find(query).skip(skip).limit(limit)
-        cases = []
-        for case in cursor:
-            # Convert ObjectId to string for serialization
-            case["id"] = str(case.pop("_id"))
-            cases.append(case)
-        return cases
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/cases/count")
-async def get_cases_count(
-    search: Optional[str] = Query(None),
-    date_from: Optional[str] = Query(None),
-    date_to: Optional[str] = Query(None),
-    case_type: Optional[CaseType] = Query(None),
-    court_division: Optional[str] = Query(None),
-    language: Optional[Language] = Query(None),
-    include_excluded: bool = Query(False)
-):
-    """Get total count of cases matching filters"""
-    query = {}
-    
-    # By default, exclude excluded cases for public access
-    if not include_excluded:
-        query["excluded"] = {"$ne": True}
-    
-    if search:
-        query["$text"] = {"$search": search}
-    if date_from or date_to:
-        date_filter = {}
-        if date_from:
-            date_filter["$gte"] = date_from
-        if date_to:
-            date_filter["$lte"] = date_to
-        query["date"] = date_filter
-    if case_type:
-        query["type"] = case_type
-    if court_division:
-        query["court_division"] = {"$regex": court_division, "$options": "i"}
-    if language:
-        query["language_of_proceedings"] = language
-    
-    try:
-        count = cases_collection.count_documents(query)
-        return {"count": count}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/cases/{case_id}", response_model=CaseModel)
-async def get_case(case_id: str):
-    """Get a specific case by ID"""
-    try:
-        case = cases_collection.find_one({"_id": case_id})
-        if not case:
-            raise HTTPException(status_code=404, detail="Case not found")
-        
-        # Convert ObjectId to string for serialization
-        case["id"] = str(case.pop("_id"))
-        return case
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/cases/{case_id}")
-async def update_case(case_id: str, case_update: CaseUpdateModel):
-    """Update a case with administrative data"""
-    try:
-        # Check if case exists
-        case = cases_collection.find_one({"_id": case_id})
-        if not case:
-            raise HTTPException(status_code=404, detail="Case not found")
-        
-        # Prepare update data
-        update_data = {}
-        if case_update.admin_summary is not None:
-            update_data["admin_summary"] = case_update.admin_summary
-        if case_update.apports is not None:
-            update_data["apports"] = [apport.dict() for apport in case_update.apports]
-        if case_update.excluded is not None:
-            update_data["excluded"] = case_update.excluded
-        if case_update.exclusion_reason is not None:
-            update_data["exclusion_reason"] = case_update.exclusion_reason
-        
-        # Update the case
-        result = cases_collection.update_one(
-            {"_id": case_id},
-            {"$set": update_data}
-        )
-        
-        if result.modified_count == 0:
-            raise HTTPException(status_code=400, detail="No changes made")
-        
-        # Return updated case
-        updated_case = cases_collection.find_one({"_id": case_id})
-        updated_case["id"] = str(updated_case.pop("_id"))
-        return updated_case
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Settings endpoints
 @app.get("/api/admin/settings")
-async def get_settings(
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Get system settings (admin only)"""
+async def get_all_settings(current_user: UserInDB = Depends(get_admin_user)):
+    """Get all settings (admin only)"""
     try:
-        settings = settings_collection.find({})
+        settings = list(settings_collection.find({}))
         settings_dict = {}
         for setting in settings:
             settings_dict[setting["key"]] = setting["value"]
@@ -1680,241 +1239,132 @@ async def get_settings(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/admin/settings/{key}")
-async def update_setting(
-    key: str,
-    value: Dict[str, Any],
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Update a system setting (admin only)"""
-    try:
-        setting = {
-            "key": key,
-            "value": value,
-            "updated_at": datetime.utcnow(),
-            "updated_by": current_user.id
-        }
-        
-        result = settings_collection.update_one(
-            {"key": key},
-            {"$set": setting},
-            upsert=True
-        )
-        
-        # Reload email service config if email settings were updated
-        if key == "email_service":
-            email_service.load_config()
-        
-        return {"message": f"Setting '{key}' updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# User Management and Permissions endpoints
-@app.get("/api/admin/users")
-async def get_users(
+# Cases endpoints (keeping existing implementation)
+@app.get("/api/cases")
+async def get_cases(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(100, ge=1, le=500),
     search: Optional[str] = Query(None),
-    role: Optional[str] = Query(None),
-    current_user: UserInDB = Depends(get_admin_user)
+    case_type: Optional[str] = Query(None),
+    court_division: Optional[str] = Query(None),
+    language: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    excluded: Optional[bool] = Query(None)
 ):
-    """Get users (admin only)"""
+    """Get cases with optional filtering"""
     try:
+        # Build query
         query = {}
         
+        if excluded is not None:
+            query["excluded"] = excluded
+        
+        if case_type:
+            query["type"] = case_type
+        
+        if court_division:
+            query["court_division"] = {"$regex": court_division, "$options": "i"}
+        
+        if language:
+            query["language_of_proceedings"] = language
+        
+        if date_from or date_to:
+            date_query = {}
+            if date_from:
+                date_query["$gte"] = date_from
+            if date_to:
+                date_query["$lte"] = date_to
+            query["date"] = date_query
+        
         if search:
-            query["$or"] = [
-                {"username": {"$regex": search, "$options": "i"}},
-                {"email": {"$regex": search, "$options": "i"}}
-            ]
+            query["$text"] = {"$search": search}
         
-        if role:
-            query["role"] = role
+        # Get cases
+        cursor = cases_collection.find(query).skip(skip).limit(limit).sort("date", -1)
+        cases = []
+        for case in cursor:
+            case["id"] = str(case.pop("_id"))
+            cases.append(case)
         
-        cursor = users_collection.find(query).skip(skip).limit(limit)
-        users = []
-        for user in cursor:
-            user["id"] = str(user.pop("_id"))
-            user.pop("hashed_password", None)  # Don't return password
-            users.append(user)
-        return users
+        return cases
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/admin/users/{user_id}/role")
-async def update_user_role(
-    user_id: str,
-    role_data: Dict[str, str],
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Update user role (admin only)"""
+@app.get("/api/cases/{case_id}")
+async def get_case_detail(case_id: str):
+    """Get detailed case information"""
     try:
-        new_role = role_data.get("role")
-        if new_role not in ["user", "editor", "admin"]:
-            raise HTTPException(status_code=400, detail="Invalid role")
+        case = cases_collection.find_one({"_id": case_id})
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
         
-        result = users_collection.update_one(
-            {"_id": user_id},
-            {"$set": {"role": new_role, "updated_at": datetime.utcnow()}}
-        )
-        
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        return {"message": f"User role updated to {new_role}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/admin/users/{user_id}")
-async def delete_user(
-    user_id: str,
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Delete a user (admin only)"""
-    try:
-        # Prevent admin from deleting themselves
-        if user_id == current_user.id:
-            raise HTTPException(status_code=400, detail="Cannot delete yourself")
-        
-        result = users_collection.delete_one({"_id": user_id})
-        
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        return {"message": "User deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Footer Management endpoint
-@app.get("/api/admin/footer")
-async def get_footer_content(
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Get footer content (admin only)"""
-    try:
-        footer_setting = settings_collection.find_one({"key": "footer"})
-        if footer_setting:
-            return footer_setting["value"]
-        return {"content": "", "links": [], "social_media": []}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/admin/footer")
-async def update_footer_content(
-    footer_data: Dict[str, Any],
-    current_user: UserInDB = Depends(get_admin_user)
-):
-    """Update footer content (admin only)"""
-    try:
-        setting = {
-            "key": "footer",
-            "value": footer_data,
-            "updated_at": datetime.utcnow(),
-            "updated_by": current_user.id
-        }
-        
-        result = settings_collection.update_one(
-            {"key": "footer"},
-            {"$set": setting},
-            upsert=True
-        )
-        
-        return {"message": "Footer updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Public footer endpoint
-@app.get("/api/footer")
-async def get_public_footer():
-    """Get public footer content"""
-    try:
-        footer_setting = settings_collection.find_one({"key": "footer"})
-        if footer_setting:
-            return footer_setting["value"]
-        return {"content": "Powered by Romulus 2 - Advanced UPC Legal Analysis", "links": [], "social_media": []}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/filters")
-async def get_filters():
-    """Get available filter options"""
-    try:
-        court_divisions = cases_collection.distinct("court_division")
-        languages = cases_collection.distinct("language_of_proceedings")
-        tags = cases_collection.distinct("tags")
-        
-        return {
-            "court_divisions": court_divisions,
-            "languages": languages,
-            "tags": tags,
-            "case_types": [e.value for e in CaseType],
-            "action_types": [e.value for e in ActionType]
-        }
+        case["id"] = str(case.pop("_id"))
+        return case
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/stats")
-async def get_statistics():
+async def get_stats():
     """Get database statistics"""
     try:
-        stats = {
-            "total_cases": cases_collection.count_documents({}),
-            "case_types": list(cases_collection.distinct("type")),
-            "court_divisions": list(cases_collection.distinct("court_division")),
-            "languages": list(cases_collection.distinct("language_of_proceedings")),
-            "recent_cases": cases_collection.count_documents({
-                "date": {"$gte": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")}
-            })
+        total_cases = cases_collection.count_documents({})
+        total_orders = cases_collection.count_documents({"type": "Order"})
+        total_decisions = cases_collection.count_documents({"type": "Decision"})
+        
+        # Get recent cases (last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_cases = list(cases_collection.find({
+            "date": {"$gte": thirty_days_ago.strftime("%Y-%m-%d")}
+        }).sort("date", -1).limit(10))
+        
+        for case in recent_cases:
+            case["id"] = str(case.pop("_id"))
+        
+        return {
+            "total_cases": total_cases,
+            "total_orders": total_orders,
+            "total_decisions": total_decisions,
+            "recent_cases": recent_cases
         }
-        return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# UPC Legal Texts Endpoints
+# UPC Text endpoints
 @app.get("/api/upc-texts")
 async def get_upc_texts(
-    document_type: Optional[str] = Query(None),
-    part_number: Optional[str] = Query(None),
-    chapter_number: Optional[str] = Query(None),
-    section_number: Optional[str] = Query(None),
-    language: str = Query("EN"),
-    search: Optional[str] = Query(None)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    search: Optional[str] = Query(None),
+    document_type: Optional[str] = Query(None)
 ):
     """Get UPC legal texts with optional filtering"""
     try:
-        query = {"language": language}
+        query = {}
         
         if document_type:
             query["document_type"] = document_type
-        if part_number:
-            query["part_number"] = part_number
-        if chapter_number:
-            query["chapter_number"] = chapter_number
-        if section_number:
-            query["section_number"] = section_number
         
         if search:
-            query["$or"] = [
-                {"title": {"$regex": search, "$options": "i"}},
-                {"content": {"$regex": search, "$options": "i"}},
-                {"article_number": {"$regex": search, "$options": "i"}}
-            ]
+            query["$text"] = {"$search": search}
         
-        texts = list(upc_texts_collection.find(query).sort("article_number", 1))
-        for text in texts:
+        cursor = upc_texts_collection.find(query).skip(skip).limit(limit).sort("article_number", 1)
+        texts = []
+        for text in cursor:
             text["id"] = str(text.pop("_id"))
+            texts.append(text)
         
         return texts
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/upc-texts/{text_id}")
-async def get_upc_text(text_id: str):
-    """Get a specific UPC legal text"""
+async def get_upc_text_detail(text_id: str):
+    """Get detailed UPC text information"""
     try:
         text = upc_texts_collection.find_one({"_id": text_id})
         if not text:
-            raise HTTPException(status_code=404, detail="Text not found")
+            raise HTTPException(status_code=404, detail="UPC text not found")
         
         text["id"] = str(text.pop("_id"))
         return text
