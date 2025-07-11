@@ -42,6 +42,7 @@ import Notification from './Notification';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthModal from './components/AuthModal';
+import Footer from './components/Footer';
 import UserMenu from './components/UserMenu';
 
 // Composant principal de l'application
