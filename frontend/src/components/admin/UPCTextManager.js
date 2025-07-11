@@ -12,8 +12,10 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
+  const { t } = useTranslation();
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,10 +26,10 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
 
   // Document types
   const documentTypes = [
-    { value: 'rules_of_procedure', label: 'Règles de procédure' },
-    { value: 'upc_agreement', label: 'Accord UPC' },
-    { value: 'statute', label: 'Statut' },
-    { value: 'fees', label: 'Règlement des honoraires' }
+    { value: 'rules_of_procedure', label: t('upcTextManager.documentTypes.rules_of_procedure') },
+    { value: 'upc_agreement', label: t('upcTextManager.documentTypes.upc_agreement') },
+    { value: 'statute', label: t('upcTextManager.documentTypes.statute') },
+    { value: 'fees', label: t('upcTextManager.documentTypes.fees') }
   ];
 
   const fetchTexts = async () => {
@@ -171,7 +173,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">
-                {text ? 'Modifier le texte' : 'Nouveau texte UPC'}
+                {text ? t('upcTextManager.editText') : t('upcTextManager.newText')}
               </h2>
               <button
                 onClick={onCancel}
@@ -186,7 +188,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de document
+                  {t('upcTextManager.documentType')}
                 </label>
                 <select
                   value={formData.document_type}
@@ -204,7 +206,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Section
+                  {t('upcTextManager.section')}
                 </label>
                 <input
                   type="text"
@@ -218,7 +220,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Numéro d'article
+                  {t('upcTextManager.articleNumber')}
                 </label>
                 <input
                   type="text"
@@ -232,7 +234,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Langue
+                  {t('upcTextManager.language')}
                 </label>
                 <select
                   value={formData.language}
@@ -248,55 +250,55 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Titre
+                {t('upcTextManager.title')}
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Titre du texte"
+                placeholder={t('upcTextManager.title')}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contenu
+                {t('upcTextManager.content')}
               </label>
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData({...formData, content: e.target.value})}
                 rows={8}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Contenu du texte juridique"
+                placeholder={t('upcTextManager.content')}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Références croisées (séparées par des virgules)
+                {t('upcTextManager.crossReferences')}
               </label>
               <input
                 type="text"
                 value={formData.cross_references.join(', ')}
                 onChange={(e) => setFormData({...formData, cross_references: e.target.value.split(',').map(ref => ref.trim())})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Rule 2, Article 1 UPCA"
+                placeholder={t('upcTextManager.crossReferences')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mots-clés (séparés par des virgules)
+                {t('upcTextManager.keywords')}
               </label>
               <input
                 type="text"
                 value={formData.keywords.join(', ')}
                 onChange={(e) => setFormData({...formData, keywords: e.target.value.split(',').map(keyword => keyword.trim())})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="procédure, compétence, brevet"
+                placeholder={t('upcTextManager.keywords')}
               />
             </div>
 
@@ -306,14 +308,14 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
                 onClick={onCancel}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Annuler
+                {t('upcTextManager.cancel')}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <Save className="h-4 w-4" />
-                <span>Enregistrer</span>
+                <span>{t('upcTextManager.save')}</span>
               </button>
             </div>
           </form>
@@ -327,15 +329,15 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Code UPC/JUB</h2>
-          <p className="text-gray-600">Gestion des textes juridiques et règlements</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t('upcTextManager.title')}</h2>
+          <p className="text-gray-600">{t('upcTextManager.subtitle')}</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          <span>Nouveau texte</span>
+          <span>{t('upcTextManager.newText')}</span>
         </button>
       </div>
 
@@ -359,7 +361,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
               onChange={(e) => setFilterType(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">Tous les types</option>
+              <option value="all">{t('upcTextManager.allTypes')}</option>
               {documentTypes.map(type => (
                 <option key={type.value} value={type.value}>
                   {type.label}
@@ -372,7 +374,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
             >
               <RefreshCw className="h-4 w-4" />
-              <span>Actualiser</span>
+              <span>{t('upcTextManager.refresh')}</span>
             </button>
           </div>
         </div>
@@ -391,9 +393,9 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
         ) : filteredTexts.length === 0 ? (
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun texte trouvé</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('upcTextManager.noTextFound')}</h3>
             <p className="text-gray-600">
-              {searchTerm ? `Aucun texte ne correspond à "${searchTerm}"` : 'Commencez par ajouter un texte'}
+              {searchTerm ? `${t('upcTextManager.noTextMatchSearch')}: "${searchTerm}"` : `${t('upcTextManager.startAddingText')}`}
             </p>
           </div>
         ) : (
@@ -435,7 +437,7 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
                         ))}
                         {text.keywords.length > 5 && (
                           <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                            +{text.keywords.length - 5} autres
+                            +{text.keywords.length - 5} {t('upcTextManager.others')}
                           </span>
                         )}
                       </div>
@@ -446,14 +448,14 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
                     <button
                       onClick={() => setEditingText(text)}
                       className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Modifier"
+                      title={t('upcTextManager.edit')}
                     >
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteText(text.id)}
                       className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Supprimer"
+                      title={t('upcTextManager.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

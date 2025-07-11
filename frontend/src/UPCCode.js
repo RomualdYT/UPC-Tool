@@ -25,8 +25,10 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import UPCTextLoader from './UPCTextLoader';
+import { useTranslation } from 'react-i18next';
 
 const UPCCode = ({ onBack }) => {
+  const { t, i18n } = useTranslation();
   const [upcTexts, setUpcTexts] = useState([]);
   const [structure, setStructure] = useState({});
   const [selectedText, setSelectedText] = useState(null);
@@ -121,13 +123,7 @@ const UPCCode = ({ onBack }) => {
   }, {});
 
   const getDocumentTypeLabel = (docType) => {
-    const labels = {
-      'rules_of_procedure': 'Rules of Procedure',
-      'upc_agreement': 'UPC Agreement',
-      'statute': 'Statute',
-      'fees': 'Table of Fees'
-    };
-    return labels[docType] || docType;
+    return t(`upcCode.documentTypes.${docType}`, docType);
   };
 
   const getDocumentTypeIcon = (docType) => {
@@ -157,7 +153,7 @@ const UPCCode = ({ onBack }) => {
                 className="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" />
-                <span>Retour</span>
+                <span>{t('upcCode.back')}</span>
               </button>
               <div className="h-6 w-px bg-white/30"></div>
               <div className="flex items-center space-x-3">
@@ -165,20 +161,20 @@ const UPCCode = ({ onBack }) => {
                   <Book className="h-6 w-6 text-white" />
                 </div>
                 <h1 className="text-xl font-bold text-white font-display">
-                  Code UPC Interactif
+                  {t('upcCode.title')}
                 </h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-blue-100">
-                {Object.keys(structure).length} documents • {upcTexts.length} articles
+                {Object.keys(structure).length} {t('upcCode.documents')} • {upcTexts.length} {t('upcCode.articles')}
               </div>
               <button
                 onClick={() => setShowTextLoader(true)}
                 className="flex items-center space-x-2 px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-sm"
               >
                 <Settings className="h-4 w-4" />
-                <span>Charger textes officiels</span>
+                <span>{t('upcCode.loadOfficialTexts')}</span>
               </button>
             </div>
           </div>
@@ -197,7 +193,7 @@ const UPCCode = ({ onBack }) => {
                     <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Rechercher dans les textes..."
+                      placeholder={t('upcCode.searchPlaceholder')}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -206,14 +202,14 @@ const UPCCode = ({ onBack }) => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Type de document
+                      {t('upcCode.documentType')}
                     </label>
                     <select
                       value={selectedDocType}
                       onChange={(e) => setSelectedDocType(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Tous les documents</option>
+                      <option value="">{t('upcCode.allDocuments')}</option>
                       {Object.keys(structure).map(docType => (
                         <option key={docType} value={docType}>
                           {getDocumentTypeLabel(docType)} ({structure[docType].count})
@@ -229,7 +225,7 @@ const UPCCode = ({ onBack }) => {
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
                     <Globe className="h-5 w-5 text-blue-600" />
-                    <span>Navigation</span>
+                    <span>{t('upcCode.navigation')}</span>
                   </h3>
                   
                   <div className="space-y-2">
@@ -327,7 +323,7 @@ const UPCCode = ({ onBack }) => {
                           className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 font-medium"
                         >
                           <ExternalLink className="h-4 w-4" />
-                          <span>Références croisées ({selectedText.cross_references.length})</span>
+                          <span>{t('upcCode.crossReferences', { count: selectedText.cross_references.length })}</span>
                           {showCrosReferences ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                         
@@ -360,7 +356,7 @@ const UPCCode = ({ onBack }) => {
                   <div className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
                       <Gavel className="h-5 w-5 text-orange-600" />
-                      <span>Jurisprudence associée</span>
+                      <span>{t('upcCode.associatedJudgments')}</span>
                       <span className="text-sm font-normal text-gray-500">
                         ({linkedCases.length})
                       </span>
@@ -370,7 +366,7 @@ const UPCCode = ({ onBack }) => {
                       <div className="text-center py-8">
                         <Info className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500">
-                          Aucune décision liée à cette règle pour le moment.
+                          {t('upcCode.noAssociatedJudgments')}
                         </p>
                       </div>
                     ) : (
@@ -410,7 +406,7 @@ const UPCCode = ({ onBack }) => {
                                 className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors flex items-center space-x-1"
                               >
                                 <Eye className="h-3 w-3" />
-                                <span>Voir détails</span>
+                                <span>{t('upcCode.seeDetails')}</span>
                               </button>
                             </div>
                             
@@ -420,7 +416,7 @@ const UPCCode = ({ onBack }) => {
                                   <Quote className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                                   <div>
                                     <p className="text-sm font-medium text-orange-800 mb-1">
-                                      Citation - {selectedText.article_number}
+                                      {t('upcCode.citation', { articleNumber: selectedText.article_number })}
                                     </p>
                                     <p className="text-sm text-orange-700 italic">
                                       "{linkedCase.citation}"
@@ -445,11 +441,10 @@ const UPCCode = ({ onBack }) => {
                 <div className="p-12 text-center">
                   <Book className="h-16 w-16 text-gray-300 mx-auto mb-6" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Code UPC Interactif
+                    {t('upcCode.title')}
                   </h3>
                   <p className="text-gray-600 max-w-md mx-auto">
-                    Sélectionnez un article ou une règle dans la navigation de gauche 
-                    pour voir son contenu et la jurisprudence associée.
+                    {t('upcCode.subtitle')}
                   </p>
                 </div>
               </div>
