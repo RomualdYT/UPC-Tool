@@ -624,140 +624,141 @@ const AppContent = () => {
                         transition={{ duration: 0.3, delay: index * 0.1 }}
                         className="romulus-card hover-lift"
                       >
-                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                        <div className="lg:col-span-3">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center space-x-3">
-                              <span className={`romulus-badge ${getCaseTypeBadge(case_item.type)}`}>
-                                {case_item.type}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {formatDate(case_item.date)}
-                              </span>
-                              {/* Badges d'administration */}
-                              {case_item.apports && case_item.apports.length > 0 && (
-                                <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
-                                  <Star className="h-3 w-3" />
-                                  <span>Important</span>
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                          <div className="lg:col-span-3">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center space-x-3">
+                                <span className={`romulus-badge ${getCaseTypeBadge(case_item.type)}`}>
+                                  {case_item.type}
                                 </span>
-                              )}
-                              {case_item.admin_summary && (
-                                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center space-x-1">
-                                  <MessageSquare className="h-3 w-3" />
-                                  <span>Commenté</span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  {formatDate(case_item.date)}
                                 </span>
-                              )}
+                                {/* Badges d'administration */}
+                                {case_item.apports && case_item.apports.length > 0 && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full flex items-center space-x-1">
+                                    <Star className="h-3 w-3" />
+                                    <span>Important</span>
+                                  </span>
+                                )}
+                                {case_item.admin_summary && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center space-x-1">
+                                    <MessageSquare className="h-3 w-3" />
+                                    <span>Commenté</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Building2 className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">{case_item.court_division}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Building2 className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">{case_item.court_division}</span>
-                            </div>
-                          </div>
-                          
-                          <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                            {case_item.reference}
-                          </h4>
-                          
-                          <p className="text-gray-600 mb-3 line-clamp-3">
-                            {case_item.summary}
-                          </p>
-                          
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {(case_item.parties || []).map((party, idx) => (
-                              <span key={idx} className="romulus-badge-secondary flex items-center space-x-1">
-                                <Users className="h-3 w-3" />
-                                <span>{party}</span>
-                              </span>
-                            ))}
-                          </div>
-                          
-                          {(case_item.tags || []).length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {(case_item.tags || []).map((tag, idx) => (
+                            
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                              {case_item.reference}
+                            </h4>
+                            
+                            <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-3">
+                              {case_item.summary}
+                            </p>
+                            
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {(case_item.parties || []).map((party, idx) => (
                                 <span key={idx} className="romulus-badge-secondary flex items-center space-x-1">
-                                  <Tag className="h-3 w-3" />
-                                  <span>{tag}</span>
+                                  <Users className="h-3 w-3" />
+                                  <span>{party}</span>
                                 </span>
                               ))}
                             </div>
-                          )}
-
-                          {/* Informations d'administration */}
-                          {case_item.admin_summary && (
-                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <MessageSquare className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">Résumé administratif</span>
-                              </div>
-                              <p className="text-sm text-blue-700 line-clamp-2">{case_item.admin_summary}</p>
-                            </div>
-                          )}
-
-                          {case_item.apports && case_item.apports.length > 0 && (
-                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Star className="h-4 w-4 text-red-600" />
-                                <span className="text-sm font-medium text-red-800">Apports juridiques ({case_item.apports.length})</span>
-                              </div>
-                              <div className="space-y-2">
-                                {case_item.apports.slice(0, 2).map((apport, idx) => (
-                                  <div key={idx} className="text-sm">
-                                    <span className="font-medium text-red-700">Art. {apport.article_number}</span>
-                                    <span className="text-red-600"> - {apport.regulation}</span>
-                                    {apport.citation && (
-                                      <p className="text-xs text-red-600 mt-1 italic">"{apport.citation}"</p>
-                                    )}
-                                  </div>
-                                ))}
-                                {case_item.apports.length > 2 && (
-                                  <p className="text-xs text-red-600">+{case_item.apports.length - 2} autres apports</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-col space-y-2">
-                          <div className="text-sm text-gray-500">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <Scale className="h-3 w-3" />
-                              <span>Registry: {case_item.registry_number}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 mb-1">
-                              <Globe className="h-3 w-3" />
-                              <span>Language: {case_item.language_of_proceedings}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <FileText className="h-3 w-3" />
-                              <span>Action: {case_item.type_of_action}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col space-y-2 pt-2">
-                            <button 
-                              onClick={() => handleViewDetails(case_item.id)}
-                              className="romulus-btn-primary text-sm py-2 flex items-center justify-center space-x-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span>View Details</span>
-                            </button>
                             
-                            {(case_item.documents || []).length > 0 && (
-                              <a
-                                href={(case_item.documents || [])[0]?.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="romulus-btn-secondary text-sm py-2 flex items-center justify-center space-x-2"
-                              >
-                                <Download className="h-4 w-4" />
-                                <span>Download</span>
-                              </a>
+                            {(case_item.tags || []).length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {(case_item.tags || []).map((tag, idx) => (
+                                  <span key={idx} className="romulus-badge-secondary flex items-center space-x-1">
+                                    <Tag className="h-3 w-3" />
+                                    <span>{tag}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Informations d'administration */}
+                            {case_item.admin_summary && (
+                              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Résumé administratif</span>
+                                </div>
+                                <p className="text-sm text-blue-700 dark:text-blue-300 line-clamp-2">{case_item.admin_summary}</p>
+                              </div>
+                            )}
+
+                            {case_item.apports && case_item.apports.length > 0 && (
+                              <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Star className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                  <span className="text-sm font-medium text-red-800 dark:text-red-300">Apports juridiques ({case_item.apports.length})</span>
+                                </div>
+                                <div className="space-y-2">
+                                  {case_item.apports.slice(0, 2).map((apport, idx) => (
+                                    <div key={idx} className="text-sm">
+                                      <span className="font-medium text-red-700 dark:text-red-300">Art. {apport.article_number}</span>
+                                      <span className="text-red-600 dark:text-red-400"> - {apport.regulation}</span>
+                                      {apport.citation && (
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-1 italic">"{apport.citation}"</p>
+                                      )}
+                                    </div>
+                                  ))}
+                                  {case_item.apports.length > 2 && (
+                                    <p className="text-xs text-red-600 dark:text-red-400">+{case_item.apports.length - 2} autres apports</p>
+                                  )}
+                                </div>
+                              </div>
                             )}
                           </div>
+                          
+                          <div className="flex flex-col space-y-2">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Scale className="h-3 w-3" />
+                                <span>Registry: {case_item.registry_number}</span>
+                              </div>
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Globe className="h-3 w-3" />
+                                <span>Language: {case_item.language_of_proceedings}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <FileText className="h-3 w-3" />
+                                <span>Action: {case_item.type_of_action}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col space-y-2 pt-2">
+                              <button 
+                                onClick={() => handleViewDetails(case_item.id)}
+                                className="romulus-btn-primary text-sm py-2 flex items-center justify-center space-x-2"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span>View Details</span>
+                              </button>
+                              
+                              {(case_item.documents || []).length > 0 && (
+                                <a
+                                  href={(case_item.documents || [])[0]?.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="romulus-btn-secondary text-sm py-2 flex items-center justify-center space-x-2"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  <span>Download</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               )}
             </motion.div>
