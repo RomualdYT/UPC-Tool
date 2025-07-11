@@ -3,6 +3,7 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -77,6 +78,11 @@ module.exports = {
         'slide-down': 'slideDown 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'bounce-subtle': 'bounceSubtle 0.6s ease-in-out',
+        'skeleton-pulse': 'skeletonPulse 1.5s ease-in-out infinite',
+        'fade-in-up': 'fadeInUp 0.5s ease-out',
+        'scale-in-out': 'scaleInOut 0.2s ease-in-out',
+        'slide-left': 'slideLeft 0.3s ease-out',
+        'slide-right': 'slideRight 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -98,6 +104,27 @@ module.exports = {
         bounceSubtle: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-5px)' },
+        },
+        skeletonPulse: {
+          '0%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+          '100%': { opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleInOut: {
+          '0%': { transform: 'scale(0.95)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        slideLeft: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        slideRight: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
         }
       },
       boxShadow: {
