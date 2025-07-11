@@ -387,9 +387,30 @@ const CaseDetail = ({ caseId, onClose }) => {
                     <div className="border rounded-lg overflow-hidden">
                       <iframe
                         src={pdfUrl}
-                        className="w-full h-96"
+                        className="w-full h-[600px] lg:h-[700px]"
                         title="Case Document"
+                        allow="fullscreen"
+                        style={{
+                          border: 'none',
+                          borderRadius: '8px'
+                        }}
                       />
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <span>Tip: Use Ctrl+scroll to zoom in/out</span>
+                      <button
+                        onClick={() => {
+                          const iframe = document.querySelector('iframe[title="Case Document"]');
+                          if (iframe) {
+                            iframe.requestFullscreen?.();
+                          }
+                        }}
+                        className="text-orange-600 hover:text-orange-700 flex items-center space-x-1"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        <span>Fullscreen</span>
+                      </button>
                     </div>
                   </div>
                 )}
