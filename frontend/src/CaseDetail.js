@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   X, 
   FileText, 
@@ -25,7 +25,7 @@ import { format } from 'date-fns';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
 const CaseDetail = ({ caseId, onClose }) => {
-  const { t } = useTranslation();
+
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -33,13 +33,7 @@ const CaseDetail = ({ caseId, onClose }) => {
   const [editingSummary, setEditingSummary] = useState(false);
   const [internalSummary, setInternalSummary] = useState('');
 
-  useEffect(() => {
-    if (caseId) {
-      fetchCaseDetails();
-    }
-  }, [caseId]);
-
-  const fetchCaseDetails = async () => {
+  const fetchCaseDetails = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${BACKEND_URL}/api/cases/${caseId}`);
@@ -50,7 +44,13 @@ const CaseDetail = ({ caseId, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [caseId]);
+
+  useEffect(() => {
+    if (caseId) {
+      fetchCaseDetails();
+    }
+  }, [fetchCaseDetails]);
 
   const fetchPdfDocument = async () => {
     try {
@@ -195,15 +195,35 @@ const CaseDetail = ({ caseId, onClose }) => {
                 </div>
               )}
 
-              {/* Official Summary */}
-              <div className="romulus-card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Official Summary
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {caseData.summary}
-                </p>
-              </div>
+              {/* Headnotes */}
+              {caseData.headnotes && (
+                <div className="romulus-card">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+                    <BookOpen className="h-5 w-5 text-orange-600" />
+                    <span>Headnotes</span>
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {caseData.headnotes}
+                  </p>
+                </div>
+              )}
+
+              {/* Keywords */}
+              {caseData.keywords && caseData.keywords.length > 0 && (
+                <div className="romulus-card">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+                    <Tag className="h-5 w-5 text-orange-600" />
+                    <span>Keywords</span>
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {caseData.keywords.map((keyword, index) => (
+                      <span key={index} className="romulus-badge-secondary">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Internal Summary */}
               <div className="romulus-card border-orange-200">

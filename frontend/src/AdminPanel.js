@@ -11,10 +11,7 @@ import {
   BookOpen, 
   MessageSquare,
   Star,
-  AlertCircle,
-  CheckCircle,
   Search,
-  Filter,
   RefreshCw,
   Users,
   Building2,
@@ -31,7 +28,7 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
     setNotification
   } = useData();
 
-  const [selectedCase, setSelectedCase] = useState(null);
+
   const [editingCase, setEditingCase] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, commented, important, none
@@ -39,8 +36,9 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
 
   // Filtrer les cas selon les critères
   const filteredCases = allCases.filter(case_item => {
-    const matchesSearch = case_item.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         case_item.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (case_item.registry_number && case_item.registry_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (case_item.order_reference && case_item.order_reference.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (case_item.summary && case_item.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (case_item.court_division && case_item.court_division.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesFilter = filterType === 'all' ||
@@ -115,7 +113,9 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">{case_item.reference}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {case_item.order_reference || case_item.registry_number}
+              </h3>
               {hasApports && (
                 <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
                   <Star className="h-3 w-3" />
