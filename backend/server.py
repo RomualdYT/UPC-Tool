@@ -49,6 +49,86 @@ async def lifespan(app: FastAPI):
     # Check if we have any cases in the database
     case_count = cases_collection.count_documents({})
     
+    # Initialize UPC texts if they don't exist
+    upc_text_count = upc_texts_collection.count_documents({})
+    if upc_text_count == 0:
+        print("No UPC texts found. Loading sample UPC legal texts...")
+        sample_upc_texts = [
+            {
+                "_id": str(uuid.uuid4()),
+                "document_type": "rules_of_procedure",
+                "section": "Part I - General Provisions",
+                "article_number": "Rule 1",
+                "title": "Scope of the Rules",
+                "content": "These Rules shall govern the procedure before the Court in accordance with the Agreement and the Statute.",
+                "language": "EN",
+                "cross_references": ["Rule 2", "Article 1 UPCA"],
+                "keywords": ["procedure", "scope", "agreement", "statute"],
+                "created_date": "2025-01-11",
+                "last_updated": "2025-01-11"
+            },
+            {
+                "_id": str(uuid.uuid4()),
+                "document_type": "rules_of_procedure",
+                "section": "Part I - General Provisions",
+                "article_number": "Rule 2",
+                "title": "Definitions",
+                "content": "For the purposes of these Rules: (a) 'Agreement' means the Agreement on a Unified Patent Court; (b) 'Statute' means the Statute of the Unified Patent Court; (c) 'Court' means the Unified Patent Court; (d) 'Registry' means the Registry of the Court.",
+                "language": "EN",
+                "cross_references": ["Rule 1", "Rule 3"],
+                "keywords": ["definitions", "agreement", "statute", "court", "registry"],
+                "created_date": "2025-01-11",
+                "last_updated": "2025-01-11"
+            },
+            {
+                "_id": str(uuid.uuid4()),
+                "document_type": "rules_of_procedure",
+                "section": "Part II - Proceedings before the Court of First Instance",
+                "article_number": "Rule 13",
+                "title": "Contents of the Statement of claim",
+                "content": "The Statement of claim shall contain: (a) the names of the parties and of their representatives; (b) postal and electronic addresses for service and the names of the persons authorised to accept service; (c) the subject-matter of the dispute and the facts relied on; (d) the evidence relied on; (e) the reasons in fact and law relied on; (f) the order or remedy sought; (g) details of any order sought for provisional measures; (h) an indication of any oral procedure preferred; (i) a list of documents; (j) information on any parallel or related proceedings.",
+                "language": "EN",
+                "cross_references": ["Rule 14", "Rule 15", "Rule 206"],
+                "keywords": ["statement", "claim", "procedure", "evidence", "remedy"],
+                "created_date": "2025-01-11",
+                "last_updated": "2025-01-11"
+            },
+            {
+                "_id": str(uuid.uuid4()),
+                "document_type": "rules_of_procedure",
+                "section": "Part VI - Provisional measures",
+                "article_number": "Rule 206",
+                "title": "Application for provisional measures",
+                "content": "1. An Application for provisional measures may be lodged as a separate action or in conjunction with an action on the merits. 2. The Application for provisional measures shall contain the information set out in Rule 13 and, in addition: (a) an indication of the provisional measure sought; (b) the reasons why the provisional measure is needed; (c) the facts and evidence relied on; (d) where appropriate, an indication that the applicant is prepared to provide a security.",
+                "language": "EN",
+                "cross_references": ["Rule 13", "Rule 207", "Article 60 UPCA"],
+                "keywords": ["provisional", "measures", "application", "security", "evidence"],
+                "created_date": "2025-01-11",
+                "last_updated": "2025-01-11"
+            },
+            {
+                "_id": str(uuid.uuid4()),
+                "document_type": "upc_agreement",
+                "section": "Part I - General and Institutional Provisions",
+                "article_number": "Article 32",
+                "title": "Competence of the Court",
+                "content": "1. The Court shall have exclusive competence in respect of: (a) actions for actual or threatened infringements of patents and supplementary protection certificates and related defences, including counterclaims concerning licences; (b) actions for declarations of non-infringement of patents and supplementary protection certificates; (c) actions for provisional and protective measures and injunctions; (d) actions for revocation of patents and for declaration of invalidity of supplementary protection certificates; (e) counterclaims for revocation of patents and for declaration of invalidity of supplementary protection certificates; (f) actions for damages or compensation derived from the provisional protection conferred by a published European patent application; (g) actions relating to the use of the invention prior to the granting of the patent or to the right based on prior use of the invention; (h) actions for compensation for licences on the basis of Article 8 of Regulation (EU) No 1257/2012.",
+                "language": "EN",
+                "cross_references": ["Article 33", "Article 34", "Rule 13"],
+                "keywords": ["competence", "infringement", "revocation", "provisional measures", "damages"],
+                "created_date": "2025-01-11",
+                "last_updated": "2025-01-11"
+            }
+        ]
+        
+        try:
+            upc_texts_collection.insert_many(sample_upc_texts)
+            print("Sample UPC legal texts loaded")
+        except Exception as e:
+            print(f"UPC texts loading warning: {e}")
+    else:
+        print(f"Database already contains {upc_text_count} UPC legal texts")
+    
     if case_count == 0:
         print("No cases found in database. Loading sample data...")
         # Fallback to sample data
