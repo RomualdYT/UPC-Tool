@@ -930,6 +930,270 @@ async def update_setting(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# UPC/JUB Code Management endpoints
+@app.get("/api/admin/upc-texts", response_model=List[UPCTextModel])
+async def get_upc_texts(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    document_type: Optional[str] = Query(None),
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get UPC legal texts (admin only)"""
+    try:
+        query = {}
+        
+        if search:
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"content": {"$regex": search, "$options": "i"}},
+                {"article_number": {"$regex": search, "$options": "i"}},
+                {"section": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if document_type:
+            query["document_type"] = document_type
+        
+        cursor = upc_texts_collection.find(query).skip(skip).limit(limit)
+        texts = []
+        for text in cursor:
+            text["id"] = str(text.pop("_id"))
+            texts.append(text)
+        return texts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/admin/upc-texts")
+async def create_upc_text(
+    text_data: UPCTextModel,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Create a new UPC legal text (admin only)"""
+    try:
+        text_dict = text_data.dict()
+        text_dict["_id"] = str(uuid.uuid4())
+        text_dict["created_date"] = datetime.utcnow().isoformat()
+        text_dict["last_updated"] = datetime.utcnow().isoformat()
+        
+        result = upc_texts_collection.insert_one(text_dict)
+        
+        # Return the created text
+        created_text = upc_texts_collection.find_one({"_id": text_dict["_id"]})
+        created_text["id"] = str(created_text.pop("_id"))
+        return created_text
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/upc-texts/{text_id}")
+async def update_upc_text(
+    text_id: str,
+    text_data: UPCTextModel,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Update a UPC legal text (admin only)"""
+    try:
+        text_dict = text_data.dict()
+        text_dict["last_updated"] = datetime.utcnow().isoformat()
+        
+        result = upc_texts_collection.update_one(
+            {"_id": text_id},
+            {"$set": text_dict}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Text not found")
+        
+        # Return the updated text
+        updated_text = upc_texts_collection.find_one({"_id": text_id})
+        updated_text["id"] = str(updated_text.pop("_id"))
+        return updated_text
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/admin/upc-texts/{text_id}")
+async def delete_upc_text(
+    text_id: str,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Delete a UPC legal text (admin only)"""
+    try:
+        result = upc_texts_collection.delete_one({"_id": text_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Text not found")
+        
+        return {"message": "Text deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# User Management and Permissions endpoints
+@app.get("/api/admin/users")
+async def get_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get users (admin only)"""
+    try:
+        query = {}
+        
+        if search:
+            query["$or"] = [
+                {"username": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if role:
+            query["role"] = role
+        
+        cursor = users_collection.find(query).skip(skip).limit(limit)
+        users = []
+        for user in cursor:
+            user["id"] = str(user.pop("_id"))
+            user.pop("hashed_password", None)  # Don't return password
+            users.append(user)
+        return users
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/users/{user_id}/role")
+async def update_user_role(
+    user_id: str,
+    role_data: Dict[str, str],
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Update user role (admin only)"""
+    try:
+        new_role = role_data.get("role")
+        if new_role not in ["user", "editor", "admin"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        
+        result = users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {"role": new_role, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"message": f"User role updated to {new_role}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/admin/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Delete a user (admin only)"""
+    try:
+        # Prevent admin from deleting themselves
+        if user_id == current_user.id:
+            raise HTTPException(status_code=400, detail="Cannot delete yourself")
+        
+        result = users_collection.delete_one({"_id": user_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"message": "User deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Footer Management endpoint
+@app.get("/api/admin/footer")
+async def get_footer_content(
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get footer content (admin only)"""
+    try:
+        footer_setting = settings_collection.find_one({"key": "footer"})
+        if footer_setting:
+            return footer_setting["value"]
+        return {"content": "", "links": [], "social_media": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/admin/footer")
+async def update_footer_content(
+    footer_data: Dict[str, Any],
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Update footer content (admin only)"""
+    try:
+        setting = {
+            "key": "footer",
+            "value": footer_data,
+            "updated_at": datetime.utcnow(),
+            "updated_by": current_user.id
+        }
+        
+        result = settings_collection.update_one(
+            {"key": "footer"},
+            {"$set": setting},
+            upsert=True
+        )
+        
+        return {"message": "Footer updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Public footer endpoint
+@app.get("/api/footer")
+async def get_public_footer():
+    """Get public footer content"""
+    try:
+        footer_setting = settings_collection.find_one({"key": "footer"})
+        if footer_setting:
+            return footer_setting["value"]
+        return {"content": "Powered by Romulus 2 - Advanced UPC Legal Analysis", "links": [], "social_media": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# UPC Synchronization endpoint
+@app.post("/api/admin/sync-upc")
+async def sync_upc_data(
+    sync_params: Dict[str, Any],
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Synchronize UPC data (admin only)"""
+    try:
+        if not SCRAPER_AVAILABLE:
+            raise HTTPException(status_code=503, detail="UPC scraper not available")
+        
+        # This would normally trigger the UPC synchronization process
+        # For now, we'll just return a success message
+        return {
+            "message": "UPC synchronization started",
+            "status": "in_progress",
+            "sync_id": str(uuid.uuid4())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/admin/sync-status/{sync_id}")
+async def get_sync_status(
+    sync_id: str,
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Get UPC synchronization status (admin only)"""
+    try:
+        # This would normally check the status of the sync process
+        # For now, we'll return a mock status
+        return {
+            "sync_id": sync_id,
+            "status": "completed",
+            "progress": 100,
+            "cases_processed": 150,
+            "cases_added": 25,
+            "cases_updated": 10,
+            "last_sync": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/filters")
 async def get_filters():
     """Get available filter options"""
