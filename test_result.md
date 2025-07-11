@@ -218,9 +218,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "UPC Scraper Improvements"
-    - "UPC Sync Endpoint"
-    - "Enhanced Case Fields"
+    - "UPC Legal Texts API"
+    - "UPC Texts Structure API"
+    - "UPC Texts Linked Cases API"
+    - "UPC Texts Filtering"
+    - "Apports System Integration"
+    - "UPC Code System Workflow"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -232,3 +235,5 @@ agent_communication:
     message: "All backend API endpoints are working correctly and responding quickly. Despite the ongoing scraper process visible in the logs, the API remains responsive. No issues detected with any of the tested endpoints."
   - agent: "testing"
     message: "UPC scraper improvements testing completed successfully. All requested features are working perfectly: 1) UPC sync endpoint triggers scraping correctly, 2) Enhanced fields (keywords, headnotes, language_of_proceedings) are populated in all cases, 3) Scraper extracts real data from UPC website with excellent quality metrics, 4) Found 45 decisions with 95.6% real UPC data vs 4.4% sample data. The scraper now properly visits detail pages and extracts enhanced information as requested."
+  - agent: "testing"
+    message: "UPC Code system testing completed successfully. All new API endpoints are working correctly: 1) GET /api/upc-texts returns 5 sample legal texts with proper structure, 2) GET /api/upc-texts/structure returns document hierarchy (fixed routing issue), 3) GET /api/upc-texts/{text_id}/linked-cases successfully finds linked cases through apports, 4) Filtering functionality works for document_type, section, and language, 5) Apports system integration allows linking cases to legal texts via Rule 13 references, 6) Complete workflow tested end-to-end successfully. The system connects existing UPC decisions to legal texts through the apports system as requested."
