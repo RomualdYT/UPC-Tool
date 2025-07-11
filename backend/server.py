@@ -170,6 +170,29 @@ class ApportModel(BaseModel):
     regulation: str
     citation: str
 
+# UPC Legal Text Models
+class UPCTextModel(BaseModel):
+    id: str
+    document_type: str  # "rules_of_procedure", "upc_agreement", "statute", "fees"
+    section: str  # "Part I", "Chapter 1", etc.
+    article_number: str  # "Rule 1", "Article 3", etc.
+    title: str
+    content: str
+    language: str = "EN"
+    cross_references: List[str] = []  # References to other articles
+    keywords: List[str] = []
+    created_date: str
+    last_updated: str
+
+class LinkedCaseModel(BaseModel):
+    case_id: str
+    case_title: str
+    parties: List[str]
+    date: str
+    citation: str
+    apport_id: int
+    summary: str
+
 class CaseModel(BaseModel):
     id: str
     date: str
