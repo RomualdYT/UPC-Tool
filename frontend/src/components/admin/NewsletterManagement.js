@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import EmailSettings from './EmailSettings';
 
 const NewsletterManagement = () => {
   const { user } = useAuth();
