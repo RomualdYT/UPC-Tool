@@ -319,10 +319,14 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
         return <DashboardContent />;
       case 'users':
         return <UserManagement backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
+      case 'permissions':
+        return <PermissionsManagement />;
       case 'cases':
         return <AdminCasesManager onCaseUpdate={onCaseUpdate} />;
       case 'exclusions':
         return <CaseExclusions backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
+      case 'newsletter':
+        return <NewsletterManagement />;
       case 'upc-texts':
         return <UPCTextManager backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
       case 'sync':
