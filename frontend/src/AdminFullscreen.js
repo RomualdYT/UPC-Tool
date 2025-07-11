@@ -61,9 +61,11 @@ const AdminFullscreen = ({ onClose, onCaseUpdate }) => {
   const tabs = [
     { id: 'dashboard', label: t('admin.dashboard'), icon: BarChart3, color: 'purple' },
     { id: 'users', label: t('admin.users'), icon: Users, color: 'blue' },
+    { id: 'permissions', label: 'Permissions', icon: Key, color: 'indigo' },
     { id: 'cases', label: t('admin.cases'), icon: MessageSquare, color: 'orange' },
     { id: 'exclusions', label: t('admin.exclusions'), icon: FileText, color: 'red' },
-    { id: 'upc-texts', label: t('navigation.upcCode'), icon: BookOpen, color: 'green' },
+    { id: 'newsletter', label: 'Newsletter', icon: Mail, color: 'green' },
+    { id: 'upc-texts', label: t('navigation.upcCode'), icon: BookOpen, color: 'teal' },
     { id: 'sync', label: t('admin.sync'), icon: Database, color: 'indigo' },
     { id: 'footer', label: t('admin.footer'), icon: Layout, color: 'pink' }
   ];
