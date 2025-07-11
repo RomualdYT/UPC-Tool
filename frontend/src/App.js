@@ -828,7 +828,7 @@ const AppContent = () => {
           />
         )}
       </AnimatePresence>
-    </SEOWrapper>
+    </div>
   );
 };
 
