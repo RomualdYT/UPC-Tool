@@ -82,7 +82,7 @@ const AppContent = () => {
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [detailError, setDetailError] = useState(null);
   const [viewMode, setViewMode] = useState('cards'); // 'cards' ou 'table'
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' ou 'data'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'data', ou 'upc-code'
   const [showAdmin, setShowAdmin] = useState(false);
 
   // Fonction d'export avec notification intégrée
