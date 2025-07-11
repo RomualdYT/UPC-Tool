@@ -902,8 +902,8 @@ class UPCLegalAPITester(unittest.TestCase):
                 print("⚠️ Could not get admin token")
                 return False
             
-            # Get a case to exclude
-            response = self.session.get(f"{self.api_url}/cases", params={"limit": 1}, timeout=self.timeout)
+            # Get a case to exclude (including already excluded ones)
+            response = self.session.get(f"{self.api_url}/cases", params={"limit": 1, "include_excluded": True}, timeout=self.timeout)
             self.assertEqual(response.status_code, 200)
             cases = response.json()
             
@@ -914,7 +914,19 @@ class UPCLegalAPITester(unittest.TestCase):
             case = cases[0]
             case_id = case["id"]
             
-            # Exclude the case
+            # First include the case if it's already excluded
+            if case.get("excluded", False):
+                inclusion_data = {
+                    "excluded": False,
+                    "exclusion_reason": None
+                }
+                
+                headers = {"Authorization": f"Bearer {admin_token}"}
+                include_response = self.session.put(f"{self.api_url}/admin/cases/{case_id}/exclude", 
+                                                  json=inclusion_data, headers=headers, timeout=self.timeout)
+                self.assertEqual(include_response.status_code, 200)
+            
+            # Now exclude the case
             exclusion_data = {
                 "excluded": True,
                 "exclusion_reason": "Case contains sensitive information and should not be publicly accessible"
