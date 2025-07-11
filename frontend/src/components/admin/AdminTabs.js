@@ -33,6 +33,8 @@ const AdminTabs = ({ onClose, backendUrl, getAuthHeaders }) => {
         return <UserManagement backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
       case 'upc-texts':
         return <UPCTextManager backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
+      case 'exclusions':
+        return <CaseExclusions backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
       case 'footer':
         return <FooterManager backendUrl={backendUrl} getAuthHeaders={getAuthHeaders} />;
       case 'sync':
