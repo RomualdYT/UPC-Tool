@@ -46,6 +46,7 @@ import { useTheme } from './contexts/ThemeContext';
 // Composant principal de l'application
 const AppContent = () => {
   const { t, i18n } = useTranslation();
+  const { isDark } = useTheme();
   
   // État du contexte de données
   const {
