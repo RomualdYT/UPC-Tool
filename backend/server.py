@@ -22,11 +22,14 @@ try:
         sys.path.insert(0, current_dir)
     
     from upc_scraper import UPCScraper
+    from upc_text_parser import UPCTextParser
     SCRAPER_AVAILABLE = True
-    print("UPCScraper imported successfully")
+    TEXT_PARSER_AVAILABLE = True
+    print("UPCScraper and UPCTextParser imported successfully")
 except ImportError as e:
     SCRAPER_AVAILABLE = False
-    print(f"Warning: UPCScraper not available: {e}")
+    TEXT_PARSER_AVAILABLE = False
+    print(f"Warning: UPCScraper/UPCTextParser not available: {e}")
 
 # MongoDB connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
