@@ -892,9 +892,11 @@ const AppContent = () => {
 // Composant App principal avec Provider
 function App() {
   return (
-    <DataProvider>
-      <AppContent />
-    </DataProvider>
+    <AuthProvider>
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
+    </AuthProvider>
   );
 }
 
