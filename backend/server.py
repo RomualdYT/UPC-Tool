@@ -326,6 +326,53 @@ class CaseExclusionModel(BaseModel):
     excluded: bool
     exclusion_reason: Optional[str] = None
 
+# Authentication endpoints
+@app.post("/api/auth/register", response_model=UserResponse)
+async def register(user: UserCreate):
+    """Register a new user"""
+    try:
+        new_user = create_user(user)
+        return UserResponse(
+            id=new_user.id,
+            email=new_user.email,
+            username=new_user.username,
+            role=new_user.role,
+            profile=new_user.profile,
+            newsletter_opt_in=new_user.newsletter_opt_in,
+            created_at=new_user.created_at
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/auth/login", response_model=Token)
+async def login(user: UserLogin):
+    """Login user and return access token"""
+    authenticated_user = authenticate_user(user.email, user.password)
+    if not authenticated_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": authenticated_user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/api/auth/me", response_model=UserResponse)
+async def get_current_user_info(current_user: UserInDB = Depends(get_current_active_user)):
+    """Get current user information"""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        role=current_user.role,
+        profile=current_user.profile,
+        newsletter_opt_in=current_user.newsletter_opt_in,
+        created_at=current_user.created_at
+    )
+
 # API endpoints
 @app.get("/")
 async def root():
