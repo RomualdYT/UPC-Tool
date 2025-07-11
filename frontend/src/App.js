@@ -47,6 +47,7 @@ import UserMenu from './components/UserMenu';
 // Composant principal de l'application
 const AppContent = () => {
   const { t, i18n } = useTranslation();
+  const { user, isAuthenticated, isAdmin, canEdit } = useAuth();
   
   // État du contexte de données
   const {
@@ -87,6 +88,8 @@ const AppContent = () => {
   const [viewMode, setViewMode] = useState('cards'); // 'cards' ou 'table'
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'data', ou 'upc-code'
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
 
   // Fonction d'export avec notification intégrée
   const handleExport = (data) => {
