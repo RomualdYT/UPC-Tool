@@ -16,9 +16,11 @@ import {
   Users,
   Building2,
   Calendar,
-  Globe
+  Globe,
+  Sliders
 } from 'lucide-react';
 import { useData } from './contexts/DataContext';
+import AdminTabs from './components/admin/AdminTabs';
 
 const AdminPanel = ({ onClose, onCaseUpdate }) => {
   const {
