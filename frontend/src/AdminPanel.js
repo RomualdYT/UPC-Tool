@@ -487,15 +487,26 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
               <Settings className="h-6 w-6" />
               <div>
                 <h1 className="text-xl font-semibold">Administration UPC</h1>
-                <p className="text-orange-100 text-sm">Gestion des commentaires et apports juridiques</p>
+                <p className="text-orange-100 text-sm">
+                  {activeView === 'cases' ? 'Gestion des commentaires et apports juridiques' : 'Administration avancée'}
+                </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setActiveView(activeView === 'cases' ? 'advanced' : 'cases')}
+                className="flex items-center space-x-2 px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+              >
+                <Sliders className="h-4 w-4" />
+                <span>{activeView === 'cases' ? 'Admin avancé' : 'Gestion des cas'}</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 
