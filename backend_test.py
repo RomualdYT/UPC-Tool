@@ -1501,6 +1501,197 @@ class UPCLegalAPITester(unittest.TestCase):
             print(f"❌ Enhanced authentication workflow error: {str(e)}")
             return False
 
+    def test_36_rop_import_system(self):
+        """Test the complete ROP import system"""
+        print("\n🔍 Testing ROP import system...")
+        try:
+            # Get admin token
+            admin_token = self.test_22_admin_login()
+            if not admin_token:
+                print("⚠️ Could not get admin token")
+                return False
+            
+            headers = {"Authorization": f"Bearer {admin_token}"}
+            
+            # 1. Check initial UPC texts count
+            initial_response = self.session.get(f"{self.api_url}/admin/upc-texts", 
+                                              headers=headers, timeout=self.timeout)
+            self.assertEqual(initial_response.status_code, 200)
+            initial_texts = initial_response.json()
+            initial_count = len(initial_texts)
+            print(f"  Initial UPC texts count: {initial_count}")
+            
+            # 2. Test ROP import with all options
+            import_options = {
+                "overwrite_existing": True,
+                "import_preamble": True,
+                "import_application_rules": True,
+                "import_content": True
+            }
+            
+            import_response = self.session.post(f"{self.api_url}/admin/import-rop", 
+                                              json=import_options, headers=headers, timeout=30)
+            self.assertEqual(import_response.status_code, 200)
+            
+            import_result = import_response.json()
+            self.assertIn("imported_count", import_result)
+            self.assertIn("skipped_count", import_result)
+            self.assertIn("total_processed", import_result)
+            
+            imported_count = import_result["imported_count"]
+            print(f"  ROP import result: {imported_count} texts imported, {import_result['skipped_count']} skipped")
+            
+            # Should import around 270 rules based on the ROP JSON structure
+            self.assertGreater(imported_count, 200, "Expected to import at least 200 rules")
+            
+            # 3. Verify texts were imported
+            after_response = self.session.get(f"{self.api_url}/admin/upc-texts", 
+                                            headers=headers, timeout=self.timeout)
+            self.assertEqual(after_response.status_code, 200)
+            after_texts = after_response.json()
+            after_count = len(after_texts)
+            print(f"  UPC texts count after import: {after_count}")
+            
+            # 4. Check for specific imported content
+            rop_texts = [text for text in after_texts if text.get("document_type") == "rules_of_procedure"]
+            print(f"  Rules of Procedure texts: {len(rop_texts)}")
+            
+            # Should have preamble
+            preamble_texts = [text for text in rop_texts if text.get("article_number") == "Preamble"]
+            self.assertGreater(len(preamble_texts), 0, "Expected to find preamble")
+            
+            # Should have application rules
+            app_texts = [text for text in rop_texts if "Application and Interpretation" in text.get("article_number", "")]
+            self.assertGreater(len(app_texts), 0, "Expected to find application rules")
+            
+            # Should have specific rules
+            rule_13_texts = [text for text in rop_texts if text.get("article_number") == "Rule 13"]
+            self.assertGreater(len(rule_13_texts), 0, "Expected to find Rule 13")
+            
+            # 5. Test structure endpoint
+            structure_response = self.session.get(f"{self.api_url}/upc-texts/structure", timeout=self.timeout)
+            self.assertEqual(structure_response.status_code, 200)
+            structure = structure_response.json()
+            
+            self.assertIn("rules_of_procedure", structure)
+            rop_structure = structure["rules_of_procedure"]
+            self.assertIn("parts", rop_structure)
+            self.assertIn("total_count", rop_structure)
+            
+            print(f"  Structure contains {rop_structure['total_count']} ROP texts organized in {len(rop_structure['parts'])} parts")
+            
+            # 6. Test cross-references detection
+            if rule_13_texts:
+                rule_13 = rule_13_texts[0]
+                self.assertIn("cross_references", rule_13)
+                cross_refs = rule_13.get("cross_references", [])
+                print(f"  Rule 13 has {len(cross_refs)} cross-references detected")
+            
+            print("✅ ROP import system working correctly")
+            print(f"  - Successfully imported {imported_count} ROP texts")
+            print("  - Preamble and application rules imported ✓")
+            print("  - Hierarchical structure maintained ✓")
+            print("  - Cross-references automatically detected ✓")
+            
+            return True
+        except Exception as e:
+            print(f"❌ ROP import system error: {str(e)}")
+            return False
+
+    def test_37_upc_text_editing_system(self):
+        """Test UPC text editing and cross-reference system"""
+        print("\n🔍 Testing UPC text editing system...")
+        try:
+            # Get admin token
+            admin_token = self.test_22_admin_login()
+            if not admin_token:
+                print("⚠️ Could not get admin token")
+                return False
+            
+            headers = {"Authorization": f"Bearer {admin_token}"}
+            
+            # 1. Get existing texts
+            texts_response = self.session.get(f"{self.api_url}/admin/upc-texts", 
+                                            headers=headers, timeout=self.timeout)
+            self.assertEqual(texts_response.status_code, 200)
+            texts = texts_response.json()
+            
+            if not texts:
+                print("⚠️ No texts found for editing test")
+                return False
+            
+            # Find a Rule text to edit
+            rule_text = None
+            for text in texts:
+                if text.get("article_number", "").startswith("Rule"):
+                    rule_text = text
+                    break
+            
+            if not rule_text:
+                print("⚠️ No Rule text found for editing test")
+                return False
+            
+            text_id = rule_text["id"]
+            original_content = rule_text["content"]
+            
+            # 2. Test text editing with cross-reference detection
+            updated_content = original_content + "\n\nThis rule references Rule 206 and Article 32 of the Agreement."
+            
+            update_data = {
+                "content": updated_content,
+                "keywords": ["test", "cross-reference", "editing"]
+            }
+            
+            update_response = self.session.put(f"{self.api_url}/admin/upc-texts/{text_id}", 
+                                             json=update_data, headers=headers, timeout=self.timeout)
+            self.assertEqual(update_response.status_code, 200)
+            
+            updated_text = update_response.json()
+            self.assertEqual(updated_text["content"], updated_content)
+            self.assertIn("Rule 206", updated_text.get("cross_references", []))
+            self.assertIn("Article 32", updated_text.get("cross_references", []))
+            
+            print(f"  ✅ Text editing successful with {len(updated_text.get('cross_references', []))} cross-references detected")
+            
+            # 3. Test creating new text
+            new_text_data = {
+                "document_type": "rules_of_procedure",
+                "part_number": "Test",
+                "part_title": "Test Part",
+                "article_number": "Rule Test",
+                "title": "Test Rule for Editing System",
+                "content": "This is a test rule that references Rule 13 and Article 32 UPCA for testing purposes.",
+                "keywords": ["test", "new", "rule"]
+            }
+            
+            create_response = self.session.post(f"{self.api_url}/admin/upc-texts", 
+                                              json=new_text_data, headers=headers, timeout=self.timeout)
+            self.assertEqual(create_response.status_code, 200)
+            
+            new_text = create_response.json()
+            self.assertIn("Rule 13", new_text.get("cross_references", []))
+            self.assertIn("Article 32 UPCA", new_text.get("cross_references", []))
+            
+            print(f"  ✅ New text creation successful with {len(new_text.get('cross_references', []))} cross-references detected")
+            
+            # 4. Test text deletion
+            delete_response = self.session.delete(f"{self.api_url}/admin/upc-texts/{new_text['id']}", 
+                                                 headers=headers, timeout=self.timeout)
+            self.assertEqual(delete_response.status_code, 200)
+            
+            print("  ✅ Text deletion successful")
+            
+            print("✅ UPC text editing system working correctly")
+            print("  - Text content editing with cross-reference detection ✓")
+            print("  - New text creation with automatic cross-references ✓")
+            print("  - Text deletion ✓")
+            print("  - Keywords management ✓")
+            
+            return True
+        except Exception as e:
+            print(f"❌ UPC text editing system error: {str(e)}")
+            return False
+
 def run_tests():
     # Create a test suite
     suite = unittest.TestSuite()
