@@ -186,6 +186,10 @@
   background: white;
 }
 
+.dark .data-table {
+  background: #1f2937;
+}
+
 .data-table th {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   color: white;
@@ -196,6 +200,10 @@
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.dark .data-table th {
+  background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
 }
 
 .data-table th:hover {
@@ -209,17 +217,34 @@
   vertical-align: top;
 }
 
+.dark .data-table td {
+  border-bottom: 1px solid #374151;
+  color: #d1d5db;
+}
+
 .data-table tbody tr:hover {
   background-color: #fef3c7;
   transition: background-color 0.2s ease;
+}
+
+.dark .data-table tbody tr:hover {
+  background-color: #374151;
 }
 
 .data-table tbody tr:nth-child(even) {
   background-color: #fafafa;
 }
 
+.dark .data-table tbody tr:nth-child(even) {
+  background-color: #1f2937;
+}
+
 .data-table tbody tr:nth-child(even):hover {
   background-color: #fef3c7;
+}
+
+.dark .data-table tbody tr:nth-child(even):hover {
+  background-color: #374151;
 }
 
 /* Styles pour les badges dans le tableau */
