@@ -36,6 +36,7 @@ const UPCCode = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDocType, setSelectedDocType] = useState('');
   const [showCrosReferences, setShowCrosReferences] = useState(false);
+  const [showTextLoader, setShowTextLoader] = useState(false);
 
   // Fetch UPC structure and texts
   useEffect(() => {
