@@ -214,18 +214,18 @@ const AppContent = () => {
   const totalPages = Math.ceil(filteredCases.length / pagination.itemsPerPage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
       {/* Header */}
       <motion.header 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="gradient-primary shadow-orange-lg sticky top-0 z-40"
+        className="gradient-primary dark:from-gray-800 dark:to-gray-900 shadow-orange-lg sticky top-0 z-40 transition-all"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <div className="p-2 bg-white/20 dark:bg-gray-700/20 rounded-lg backdrop-blur-sm">
                 <Flame className="h-6 w-6 text-white" />
               </div>
               <h1 className="text-xl font-bold text-white font-display">
@@ -264,7 +264,8 @@ const AppContent = () => {
                 </button>
               </div>
 
-
+              {/* Theme Toggle */}
+              <ThemeToggle />
 
               {/* Indicateur de synchronisation */}
               <button
