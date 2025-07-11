@@ -456,6 +456,34 @@ async def get_filters():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sync/upc-texts")
+async def sync_official_upc_texts(background_tasks: BackgroundTasks):
+    """Load official UPC texts from PDFs"""
+    try:
+        # Check if text parser is available
+        if not TEXT_PARSER_AVAILABLE:
+            raise HTTPException(status_code=500, detail="UPC Text Parser not available")
+        
+        # Initialize parser with MongoDB connection
+        mongodb_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
+        parser = UPCTextParser(mongodb_url)
+        
+        # Start parsing in background
+        def load_texts():
+            try:
+                print("Starting official UPC texts loading...")
+                texts = parser.load_official_texts()
+                print(f"Official texts loading completed. {len(texts)} texts processed.")
+            except Exception as e:
+                print(f"Error during official texts loading: {e}")
+        
+        # Add the parsing task to background tasks
+        background_tasks.add_task(load_texts)
+        
+        return {"message": "Official UPC texts loading started - this may take a few minutes"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/sync/upc")
 async def sync_upc_data(background_tasks: BackgroundTasks):
     """Sync data with UPC website - scrapes all available pages"""
