@@ -46,6 +46,10 @@ db = client['upc_legal']
 cases_collection = db['cases']
 documents_collection = db['documents']
 upc_texts_collection = db['upc_texts']  # New collection for UPC legal texts
+users_collection = db['users']
+pending_changes_collection = db['pending_changes']  # For editor changes pending approval
+newsletter_collection = db['newsletter']  # For newsletter management
+settings_collection = db['settings']  # For system settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
