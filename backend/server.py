@@ -12,6 +12,14 @@ from enum import Enum
 import asyncio
 import threading
 
+# Import authentication
+from auth import (
+    UserCreate, UserLogin, UserResponse, Token, UserInDB,
+    authenticate_user, create_access_token, create_user,
+    get_current_user, get_current_active_user, get_admin_user, get_editor_or_admin_user,
+    create_initial_admin, ACCESS_TOKEN_EXPIRE_MINUTES
+)
+
 # Import the scraper at module level
 try:
     import sys
