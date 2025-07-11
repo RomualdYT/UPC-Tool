@@ -22,6 +22,7 @@ const AdminTabs = ({ onClose, backendUrl, getAuthHeaders }) => {
   const tabs = [
     { id: 'users', label: 'Utilisateurs', icon: Users, color: 'blue' },
     { id: 'upc-texts', label: 'Code UPC', icon: BookOpen, color: 'green' },
+    { id: 'exclusions', label: 'Exclusions', icon: FileText, color: 'red' },
     { id: 'footer', label: 'Footer', icon: Layout, color: 'purple' },
     { id: 'sync', label: 'Synchronisation', icon: Database, color: 'orange' }
   ];
