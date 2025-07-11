@@ -836,7 +836,9 @@ const AppContent = () => {
 function App() {
   return (
     <DataProvider>
-      <AppContent />
+      <SEOWrapper>
+        <AppContent />
+      </SEOWrapper>
     </DataProvider>
   );
 }
