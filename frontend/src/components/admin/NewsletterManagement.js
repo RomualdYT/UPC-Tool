@@ -455,6 +455,16 @@ const NewsletterManagement = () => {
         </div>
       )}
 
+      {/* Email Settings Modal */}
+      <AnimatePresence>
+        {showEmailConfig && (
+          <EmailSettings 
+            isOpen={showEmailConfig}
+            onClose={() => setShowEmailConfig(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Campaign Modal */}
       <AnimatePresence>
         {showCampaignModal && (
