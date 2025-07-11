@@ -24,7 +24,18 @@ class UPCTextParser:
         """Download PDF from URL"""
         try:
             print(f"Downloading {filename} from {url}")
-            response = requests.get(url, stream=True, timeout=30)
+            
+            # Add more headers to avoid 406 errors
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/pdf,text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
+            response = requests.get(url, stream=True, timeout=60, headers=headers)
             response.raise_for_status()
             
             with open(filename, 'wb') as f:
