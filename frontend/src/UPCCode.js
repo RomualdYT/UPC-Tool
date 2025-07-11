@@ -18,9 +18,13 @@ import {
   Star,
   MessageSquare,
   Eye,
-  Info
+  Info,
+  Download,
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
+import UPCTextLoader from './UPCTextLoader';
 
 const UPCCode = ({ onBack }) => {
   const [upcTexts, setUpcTexts] = useState([]);
