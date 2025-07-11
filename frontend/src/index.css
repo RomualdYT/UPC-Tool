@@ -5,10 +5,27 @@
 
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-gray-200 dark:border-gray-700;
   }
+  
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 transition-colors;
+  }
+  
+  /* Transitions pour le changement de thème */
+  .theme-transitions,
+  .theme-transitions * {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Désactiver les transitions pour les personnes sensibles au mouvement */
+  @media (prefers-reduced-motion: reduce) {
+    .theme-transitions,
+    .theme-transitions * {
+      transition: none !important;
+    }
   }
 }
 
