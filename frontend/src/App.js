@@ -40,6 +40,9 @@ import Notification from './Notification';
 
 // Import du contexte de données
 import { DataProvider, useData } from './contexts/DataContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthModal from './components/AuthModal';
+import UserMenu from './components/UserMenu';
 
 // Composant principal de l'application
 const AppContent = () => {
