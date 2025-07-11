@@ -538,6 +538,33 @@ async def get_upc_texts(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/upc-texts/structure")
+async def get_upc_structure(language: str = Query("EN")):
+    """Get the hierarchical structure of UPC texts"""
+    try:
+        # Get all document types and their sections
+        pipeline = [
+            {"$match": {"language": language}},
+            {"$group": {
+                "_id": "$document_type",
+                "sections": {"$addToSet": "$section"},
+                "count": {"$sum": 1}
+            }}
+        ]
+        
+        result = list(upc_texts_collection.aggregate(pipeline))
+        
+        structure = {}
+        for doc in result:
+            structure[doc["_id"]] = {
+                "sections": doc["sections"],
+                "count": doc["count"]
+            }
+        
+        return structure
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/upc-texts/{text_id}")
 async def get_upc_text(text_id: str):
     """Get a specific UPC legal text"""
@@ -592,33 +619,6 @@ async def get_linked_cases(text_id: str):
                 })
         
         return linked_cases
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/upc-texts/structure")
-async def get_upc_structure(language: str = Query("EN")):
-    """Get the hierarchical structure of UPC texts"""
-    try:
-        # Get all document types and their sections
-        pipeline = [
-            {"$match": {"language": language}},
-            {"$group": {
-                "_id": "$document_type",
-                "sections": {"$addToSet": "$section"},
-                "count": {"$sum": 1}
-            }}
-        ]
-        
-        result = list(upc_texts_collection.aggregate(pipeline))
-        
-        structure = {}
-        for doc in result:
-            structure[doc["_id"]] = {
-                "sections": doc["sections"],
-                "count": doc["count"]
-            }
-        
-        return structure
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
