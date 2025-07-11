@@ -104,6 +104,99 @@ backend:
         agent: "testing"
         comment: "Enhanced case fields are working perfectly. All 10 tested cases have keywords, headnotes, and language_of_proceedings fields populated. Language codes are valid (EN, DE, FR, IT, NL, DA). Keywords and headnotes are extracted from detail pages as expected."
 
+  - task: "UPC Legal Texts API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "User"
+        comment: "UPC legal texts API endpoints implemented - need to test functionality"
+      - working: true
+        agent: "testing"
+        comment: "UPC legal texts API is working perfectly. GET /api/upc-texts returns exactly 5 sample legal texts with proper structure including Rule 1, Rule 2, Rule 13, Rule 206, and Article 32. All required fields (id, document_type, section, article_number, title, content, language, cross_references, keywords, created_date, last_updated) are present and valid."
+
+  - task: "UPC Texts Structure API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "User"
+        comment: "UPC texts structure API endpoint implemented - need to test functionality"
+      - working: false
+        agent: "testing"
+        comment: "Initial test failed due to FastAPI routing issue - structure endpoint was being matched as text_id parameter"
+      - working: true
+        agent: "testing"
+        comment: "Fixed routing issue by reordering endpoints. GET /api/upc-texts/structure now works correctly, returning hierarchical structure with 2 document types: rules_of_procedure (4 texts, 3 sections) and upc_agreement (1 text, 1 section). Aggregation pipeline working properly."
+
+  - task: "UPC Texts Linked Cases API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "User"
+        comment: "UPC texts linked cases API endpoint implemented - need to test functionality"
+      - working: true
+        agent: "testing"
+        comment: "UPC texts linked cases API is working correctly. GET /api/upc-texts/{text_id}/linked-cases successfully finds cases linked through apports system. Successfully tested with Rule 13 - found 1 linked case with proper structure including case_id, case_title, parties, date, citation, apport_id, and summary."
+
+  - task: "UPC Texts Filtering"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "User"
+        comment: "UPC texts filtering functionality implemented - need to test filtering options"
+      - working: true
+        agent: "testing"
+        comment: "UPC texts filtering is working correctly. Successfully tested filtering by document_type (found 4 Rules of Procedure texts), section (found 2 Part I texts), and language (found 5 English texts). All filters work as expected."
+
+  - task: "Apports System Integration"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "User"
+        comment: "Apports system integration with UPC texts implemented - need to test linking functionality"
+      - working: true
+        agent: "testing"
+        comment: "Apports system integration is working perfectly. Successfully added Rule 13 apport to a case via PUT /api/cases/{case_id} endpoint. The linking between cases and legal texts through apports is functional - cases with Rule 13 apports are properly found when querying linked cases for Rule 13 text."
+
+  - task: "UPC Code System Workflow"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "User"
+        comment: "Complete UPC Code system workflow implemented - need to test end-to-end functionality"
+      - working: true
+        agent: "testing"
+        comment: "Complete UPC Code system workflow is working correctly. End-to-end test successful: 1) 5 UPC legal texts properly loaded, 2) Document structure properly organized, 3) Case-text linking via apports functional, 4) Found 1 linked case for Rule 13. The system successfully connects existing UPC decisions to legal texts through the apports system as requested."
+
 frontend:
   - task: "Frontend UI"
     implemented: true
