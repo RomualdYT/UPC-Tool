@@ -51,6 +51,10 @@ upc_texts_collection = db['upc_texts']  # New collection for UPC legal texts
 async def lifespan(app: FastAPI):
     # Startup
     print("Starting up...")
+    
+    # Create initial admin user
+    create_initial_admin()
+    
     # Create text index for search
     try:
         cases_collection.create_index([("summary", "text"), ("parties", "text"), ("reference", "text")])
@@ -157,6 +161,8 @@ async def lifespan(app: FastAPI):
                 "summary": "The Milan Local Division, under Judge Pierluigi Perrotti, issued an order in the case between claimant Progress Maschinen & Automation AG and defendants AWM s.r.l. and Schnell s.p.a. regarding patent infringement and counterclaim for patent revocation.",
                 "legal_norms": ["Art. 32 UPCA", "Rule 13 RoP"],
                 "tags": ["patent infringement", "counterclaim", "revocation"],
+                "excluded": False,
+                "exclusion_reason": None,
                 "documents": [
                     {
                         "id": str(uuid.uuid4()),
@@ -180,6 +186,8 @@ async def lifespan(app: FastAPI):
                 "summary": "The President of the Court of First Instance in Munich issued an order concerning an application by Renault entities to change the language of proceedings from German to English.",
                 "legal_norms": ["Art. 49 UPCA", "Rule 321 RoP"],
                 "tags": ["language change", "procedural order"],
+                "excluded": False,
+                "exclusion_reason": None,
                 "documents": [
                     {
                         "id": str(uuid.uuid4()),
