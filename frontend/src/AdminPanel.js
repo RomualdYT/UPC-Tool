@@ -521,157 +521,158 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
           <div className="flex h-[calc(90vh-120px)]">
             {/* Sidebar */}
             <div className="w-80 border-r border-gray-200 p-6 overflow-y-auto bg-gray-50">
-            <div className="space-y-6">
-              {/* Search */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    placeholder="Rechercher un cas..."
-                  />
+              <div className="space-y-6">
+                {/* Search */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="Rechercher un cas..."
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Filters */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Filtrer par statut</label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="all">Tous les cas ({allCases.length})</option>
-                  <option value="commented">Cas commentés ({adminStats.commented})</option>
-                  <option value="important">Cas importants ({adminStats.important})</option>
-                  <option value="none">À traiter ({adminStats.none})</option>
-                </select>
-              </div>
+                {/* Filters */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filtrer par statut</label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="all">Tous les cas ({allCases.length})</option>
+                    <option value="commented">Cas commentés ({adminStats.commented})</option>
+                    <option value="important">Cas importants ({adminStats.important})</option>
+                    <option value="none">À traiter ({adminStats.none})</option>
+                  </select>
+                </div>
 
-              {/* Stats détaillées */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-3">Statistiques détaillées</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Total des cas:</span>
-                    <span className="font-medium">{adminStats.total}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 flex items-center space-x-1">
-                      <MessageSquare className="h-3 w-3" />
-                      <span>Commentés:</span>
-                    </span>
-                    <span className="font-medium text-blue-600">{adminStats.commented}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 flex items-center space-x-1">
-                      <Star className="h-3 w-3" />
-                      <span>Importants:</span>
-                    </span>
-                    <span className="font-medium text-red-600">{adminStats.important}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">À traiter:</span>
-                    <span className="font-medium text-gray-600">{adminStats.none}</span>
-                  </div>
-                  <div className="pt-2 border-t border-gray-200">
+                {/* Stats détaillées */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h3 className="font-medium text-gray-900 mb-3">Statistiques détaillées</h3>
+                  <div className="space-y-3 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Taux de complétion:</span>
-                      <span className="font-medium text-green-600">{adminStats.completion}%</span>
+                      <span className="text-gray-600">Total des cas:</span>
+                      <span className="font-medium">{adminStats.total}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${adminStats.completion}%` }}
-                      />
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 flex items-center space-x-1">
+                        <MessageSquare className="h-3 w-3" />
+                        <span>Commentés:</span>
+                      </span>
+                      <span className="font-medium text-blue-600">{adminStats.commented}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 flex items-center space-x-1">
+                        <Star className="h-3 w-3" />
+                        <span>Importants:</span>
+                      </span>
+                      <span className="font-medium text-red-600">{adminStats.important}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">À traiter:</span>
+                      <span className="font-medium text-gray-600">{adminStats.none}</span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Taux de complétion:</span>
+                        <span className="font-medium text-green-600">{adminStats.completion}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${adminStats.completion}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Légende */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-3">Légende</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center space-x-1">
-                      <MessageSquare className="h-3 w-3" />
-                      <span>Commenté</span>
-                    </span>
-                    <span className="text-gray-600">Résumé admin ajouté</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
-                      <Star className="h-3 w-3" />
-                      <span>Important</span>
-                    </span>
-                    <span className="text-gray-600">Apports juridiques</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                      À traiter
-                    </span>
-                    <span className="text-gray-600">Aucune annotation</span>
+                {/* Légende */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-3">Légende</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full flex items-center space-x-1">
+                        <MessageSquare className="h-3 w-3" />
+                        <span>Commenté</span>
+                      </span>
+                      <span className="text-gray-600">Résumé admin ajouté</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full flex items-center space-x-1">
+                        <Star className="h-3 w-3" />
+                        <span>Important</span>
+                      </span>
+                      <span className="text-gray-600">Apports juridiques</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                        À traiter
+                      </span>
+                      <span className="text-gray-600">Aucune annotation</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Main content */}
-          <div className="flex-1 p-6 overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="loading-dots mb-4">
-                    <div></div>
-                    <div></div>
-                    <div></div>
+            {/* Main content */}
+            <div className="flex-1 p-6 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="loading-dots mb-4">
+                      <div></div>
+                      <div></div>
+                      <div></div>
+                    </div>
+                    <p className="text-gray-600">Chargement des cas...</p>
                   </div>
-                  <p className="text-gray-600">Chargement des cas...</p>
                 </div>
-              </div>
-            ) : (
-              <>
-                {/* En-tête avec compteur */}
-                <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {filterType === 'all' && 'Tous les cas'}
-                    {filterType === 'commented' && 'Cas commentés'}
-                    {filterType === 'important' && 'Cas importants'}
-                    {filterType === 'none' && 'Cas à traiter'}
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    {filteredCases.length} cas {searchTerm && `trouvés pour "${searchTerm}"`}
-                  </p>
-                </div>
-
-                {/* Grille des cas */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredCases.map((case_item) => (
-                    <CaseCard key={case_item.id} case_item={case_item} />
-                  ))}
-                </div>
-
-                {/* Message si aucun résultat */}
-                {filteredCases.length === 0 && (
-                  <div className="text-center py-12">
-                    <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun cas trouvé</h3>
-                    <p className="text-gray-600">
-                      {searchTerm 
-                        ? `Aucun cas ne correspond à "${searchTerm}"`
-                        : "Aucun cas ne correspond aux critères sélectionnés"
-                      }
+              ) : (
+                <>
+                  {/* En-tête avec compteur */}
+                  <div className="mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {filterType === 'all' && 'Tous les cas'}
+                      {filterType === 'commented' && 'Cas commentés'}
+                      {filterType === 'important' && 'Cas importants'}
+                      {filterType === 'none' && 'Cas à traiter'}
+                    </h2>
+                    <p className="text-gray-600 mt-1">
+                      {filteredCases.length} cas {searchTerm && `trouvés pour "${searchTerm}"`}
                     </p>
                   </div>
-                )}
-              </>
-            )}
+
+                  {/* Grille des cas */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredCases.map((case_item) => (
+                      <CaseCard key={case_item.id} case_item={case_item} />
+                    ))}
+                  </div>
+
+                  {/* Message si aucun résultat */}
+                  {filteredCases.length === 0 && (
+                    <div className="text-center py-12">
+                      <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun cas trouvé</h3>
+                      <p className="text-gray-600">
+                        {searchTerm 
+                          ? `Aucun cas ne correspond à "${searchTerm}"`
+                          : "Aucun cas ne correspond aux critères sélectionnés"
+                        }
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
