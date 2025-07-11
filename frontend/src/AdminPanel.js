@@ -519,8 +519,8 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
           />
         ) : (
           <div className="flex h-[calc(90vh-120px)]">
-          {/* Sidebar */}
-          <div className="w-80 border-r border-gray-200 p-6 overflow-y-auto bg-gray-50">
+            {/* Sidebar */}
+            <div className="w-80 border-r border-gray-200 p-6 overflow-y-auto bg-gray-50">
             <div className="space-y-6">
               {/* Search */}
               <div>
