@@ -1058,10 +1058,12 @@ class UPCLegalAPITester(unittest.TestCase):
         """Test complete authentication system workflow"""
         print("\n🔍 Testing complete authentication system workflow...")
         try:
-            # 1. Register new user
+            # 1. Register new user with unique credentials
+            import time
+            timestamp = str(int(time.time()))
             user_data = {
-                "email": "michael.chen@university.edu",
-                "username": "michael_chen",
+                "email": f"michael.chen.{timestamp}@university.edu",
+                "username": f"michael_chen_{timestamp}",
                 "password": "AcademicPass456!",
                 "profile": "academic",
                 "newsletter_opt_in": False
