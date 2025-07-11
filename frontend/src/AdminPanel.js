@@ -321,10 +321,10 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
               </div>
             </div>
 
-            {/* Résumé administratif */}
+            {/* Résumé par Casalonga */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Résumé administratif
+                Résumé par Casalonga
               </label>
               <textarea
                 value={formData.admin_summary}
