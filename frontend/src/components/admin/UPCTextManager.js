@@ -37,6 +37,8 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
   const [editingText, setEditingText] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTextForDeletion, setSelectedTextForDeletion] = useState(null);
   const [notification, setNotification] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'hierarchy'
   const [structure, setStructure] = useState({});
@@ -44,11 +46,85 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
 
   // Document types
   const documentTypes = [
-    { value: 'rules_of_procedure', label: 'Rules of Procedure' },
-    { value: 'upc_agreement', label: 'UPC Agreement' },
-    { value: 'statute', label: 'Statute' },
-    { value: 'fees', label: 'Fees' }
+    { value: 'rules_of_procedure', label: t('upcTextManager.documentTypes.rules_of_procedure') },
+    { value: 'upc_agreement', label: t('upcTextManager.documentTypes.upc_agreement') },
+    { value: 'statute', label: t('upcTextManager.documentTypes.statute') },
+    { value: 'fees', label: t('upcTextManager.documentTypes.fees') }
   ];
+
+  // Ajout des hooks pour la gestion des types dynamiques
+  const [typeModalOpen, setTypeModalOpen] = useState(false);
+  const [newTypeCode, setNewTypeCode] = useState('');
+  const [newTypeLabel, setNewTypeLabel] = useState('');
+  const [typeToDelete, setTypeToDelete] = useState(null);
+
+  // Calcul dynamique des types existants
+  const typesStats = React.useMemo(() => {
+    const stats = {};
+    texts.forEach(t => {
+      if (!t.document_type) return;
+      if (!stats[t.document_type]) stats[t.document_type] = { count: 0, label: t.part_title || t.chapter_title || t.section_title || t.title || t.document_type };
+      stats[t.document_type].count++;
+    });
+    return stats;
+  }, [texts]);
+
+  // Ajout d'un type (création d'un texte placeholder)
+  const handleAddType = async () => {
+    if (!newTypeCode.trim() || !newTypeLabel.trim()) return;
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/upc-texts`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          document_type: newTypeCode.trim(),
+          title: newTypeLabel.trim(),
+          article_number: 'PLACEHOLDER',
+          content: '',
+          language: 'EN',
+          keywords: [],
+          part_number: '',
+          part_title: '',
+          chapter_number: '',
+          chapter_title: '',
+          section_number: '',
+          section_title: ''
+        })
+      });
+      if (response.ok) {
+        setNotification({ message: 'Type ajouté', type: 'success' });
+        setTypeModalOpen(false);
+        setNewTypeCode('');
+        setNewTypeLabel('');
+        fetchTexts();
+      } else {
+        setNotification({ message: 'Erreur lors de l\'ajout', type: 'error' });
+      }
+    } catch (e) {
+      setNotification({ message: 'Erreur lors de l\'ajout', type: 'error' });
+    }
+  };
+
+  // Suppression d'un type (tous les textes de ce type)
+  const handleDeleteType = async (type) => {
+    if (!window.confirm(`Supprimer tous les textes du type "${type}" ? Cette action est irréversible.`)) return;
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/upc-texts/delete-by-type`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_type: type })
+      });
+      if (response.ok) {
+        setNotification({ message: 'Type supprimé', type: 'success' });
+        setTypeToDelete(null);
+        fetchTexts();
+      } else {
+        setNotification({ message: 'Erreur lors de la suppression', type: 'error' });
+      }
+    } catch (e) {
+      setNotification({ message: 'Erreur lors de la suppression', type: 'error' });
+    }
+  };
 
   const fetchTexts = async () => {
     try {
@@ -89,14 +165,15 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
     fetchStructure();
   }, []);
 
+  // Filtrage des textes affichés
   const filteredTexts = texts.filter(text => {
+    if (text.article_number === 'PLACEHOLDER') return false; // On masque les placeholders
+    const matchesType = filterType === 'all' || text.document_type === filterType;
     const matchesSearch = text.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          text.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          text.article_number.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesFilter = filterType === 'all' || text.document_type === filterType;
-    
-    return matchesSearch && matchesFilter;
+    return matchesType && matchesSearch && matchesFilter;
   });
 
   const handleSaveText = async (textData) => {
@@ -172,8 +249,56 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
     }
   };
 
+  const handleDeleteAllTextsByType = async (documentType) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer TOUS les textes de type "${documentType}" ? Cette action est irréversible.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/upc-texts/delete-by-type`, {
+        method: 'DELETE',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ document_type: documentType })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setTexts(texts.filter(t => t.document_type !== documentType));
+        setNotification({
+          message: `${result.deleted_count} textes supprimés avec succès`,
+          type: 'success'
+        });
+        fetchStructure();
+        setShowDeleteModal(false);
+        setSelectedTextForDeletion(null);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Error deleting texts by type:', error);
+      setNotification({
+        message: `Erreur lors de la suppression: ${error.message}`,
+        type: 'error'
+      });
+    }
+  };
+
   const handleImportROP = async (importOptions) => {
     try {
+      // Vérifier si l'utilisateur est authentifié
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setNotification({
+          message: 'Vous devez être connecté pour effectuer cette action',
+          type: 'error'
+        });
+        return;
+      }
+
       const response = await fetch(`${backendUrl}/api/admin/import-rop`, {
         method: 'POST',
         headers: {
@@ -195,7 +320,11 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
         fetchTexts();
         fetchStructure();
       } else {
-        throw new Error(result.detail || 'Erreur lors de l\'import');
+        if (response.status === 401) {
+          throw new Error('Session expirée. Veuillez vous reconnecter.');
+        } else {
+          throw new Error(result.detail || 'Erreur lors de l\'import');
+        }
       }
     } catch (error) {
       console.error('Error importing ROP:', error);
@@ -585,6 +714,133 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
     );
   };
 
+  const DeleteModal = ({ onDelete, onCancel }) => {
+    const [selectedType, setSelectedType] = useState('');
+    const [textCounts, setTextCounts] = useState({});
+
+    useEffect(() => {
+      // Calculer le nombre de textes par type
+      const counts = {};
+      documentTypes.forEach(type => {
+        counts[type.value] = texts.filter(t => t.document_type === type.value).length;
+      });
+      setTextCounts(counts);
+    }, [texts]);
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (selectedType) {
+        onDelete(selectedType);
+      }
+    };
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-lg shadow-xl max-w-lg w-full"
+        >
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">
+                Supprimer tous les textes d'un type
+              </h2>
+              <button
+                onClick={onCancel}
+                className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <h3 className="font-medium text-red-900">Action destructive</h3>
+              </div>
+              <p className="text-sm text-red-700">
+                Cette action supprimera définitivement tous les textes du type sélectionné. Cette opération est irréversible.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Sélectionner le type de document à supprimer
+              </label>
+              <div className="space-y-3">
+                {documentTypes.map(type => {
+                  const count = textCounts[type.value] || 0;
+                  return (
+                    <div key={type.value} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <input
+                        type="radio"
+                        id={`delete-${type.value}`}
+                        name="deleteType"
+                        value={type.value}
+                        checked={selectedType === type.value}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                        className="w-4 h-4 text-red-600 focus:ring-red-500"
+                      />
+                      <label htmlFor={`delete-${type.value}`} className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900">{type.label}</span>
+                          <span className={`text-sm px-2 py-1 rounded-full ${
+                            count > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {count} texte{count !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {selectedType && textCounts[selectedType] > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                  <h3 className="font-medium text-yellow-900">Confirmation requise</h3>
+                </div>
+                <p className="text-sm text-yellow-700">
+                  Vous êtes sur le point de supprimer <strong>{textCounts[selectedType]} texte{textCounts[selectedType] !== 1 ? 's' : ''}</strong> de type "{documentTypes.find(t => t.value === selectedType)?.label}".
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={!selectedType || textCounts[selectedType] === 0}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Supprimer tous les textes</span>
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
   const HierarchyView = () => {
     const renderNode = (nodeId, node, level = 0) => {
       const isExpanded = expandedNodes[nodeId];
@@ -670,19 +926,26 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
         </div>
         <div className="flex items-center space-x-3">
           <button
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Supprimer en masse</span>
+          </button>
+          <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
           >
             <Upload className="h-4 w-4" />
             <span>Importer ROP</span>
           </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Nouveau texte</span>
-          </button>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Nouveau texte</span>
+        </button>
         </div>
       </div>
 
@@ -751,54 +1014,105 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
         </div>
       </div>
 
+      {/* Section Types de textes */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold text-gray-900">Types de textes</h3>
+          <button
+            onClick={() => setTypeModalOpen(true)}
+            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >Ajouter un type</button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={`px-3 py-1 rounded border ${filterType === 'all' ? 'bg-blue-100 border-blue-400 text-blue-800' : 'bg-gray-100 border-gray-300 text-gray-700'}`}
+            onClick={() => setFilterType('all')}
+          >Tous ({texts.length})</button>
+          {Object.entries(typesStats).map(([type, info]) => (
+            <div key={type} className="flex items-center gap-1">
+              <button
+                className={`px-3 py-1 rounded border ${filterType === type ? 'bg-blue-100 border-blue-400 text-blue-800' : 'bg-gray-100 border-gray-300 text-gray-700'}`}
+                onClick={() => setFilterType(type)}
+              >{type} ({info.count})</button>
+              <button
+                className="ml-1 text-red-600 hover:text-red-800"
+                title="Supprimer ce type"
+                onClick={() => handleDeleteType(type)}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal ajout type */}
+      {typeModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+            <h4 className="text-lg font-bold mb-4">Ajouter un type de texte</h4>
+            <div className="mb-3">
+              <label className="block text-sm mb-1">Code interne (ex: rules_of_procedure)</label>
+              <input value={newTypeCode} onChange={e => setNewTypeCode(e.target.value)} className="w-full border px-2 py-1 rounded" />
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm mb-1">Label affiché</label>
+              <input value={newTypeLabel} onChange={e => setNewTypeLabel(e.target.value)} className="w-full border px-2 py-1 rounded" />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setTypeModalOpen(false)} className="px-3 py-1 bg-gray-200 rounded">Annuler</button>
+              <button onClick={handleAddType} className="px-3 py-1 bg-blue-600 text-white rounded">Ajouter</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {viewMode === 'hierarchy' ? (
         <HierarchyView />
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="loading-dots">
-                <div></div>
-                <div></div>
-                <div></div>
-              </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="loading-dots">
+              <div></div>
+              <div></div>
+              <div></div>
             </div>
-          ) : filteredTexts.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun texte trouvé</h3>
-              <p className="text-gray-600">
-                {searchTerm ? `Aucun texte ne correspond à "${searchTerm}"` : 'Commencez par ajouter un texte'}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredTexts.map((text) => (
-                <div key={text.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                          {documentTypes.find(t => t.value === text.document_type)?.label}
-                        </span>
-                        <span className="text-sm text-gray-600">
-                          {text.article_number}
-                        </span>
-                        <span className="text-sm text-gray-600">
-                          {text.language}
-                        </span>
+          </div>
+        ) : filteredTexts.length === 0 ? (
+          <div className="text-center py-12">
+            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun texte trouvé</h3>
+            <p className="text-gray-600">
+              {searchTerm ? `Aucun texte ne correspond à "${searchTerm}"` : 'Commencez par ajouter un texte'}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {filteredTexts.map((text) => (
+              <div key={text.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        {documentTypes.find(t => t.value === text.document_type)?.label}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {text.article_number}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {text.language}
+                      </span>
                         {text.is_editable === false && (
                           <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
                             Non modifiable
                           </span>
                         )}
-                      </div>
-                      
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {text.title}
-                      </h3>
-                      
+                    </div>
+                    
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {text.title}
+                    </h3>
+                    
                       {(text.part_title || text.chapter_title || text.section_title) && (
                         <div className="text-sm text-gray-600 mb-2">
                           {text.part_title && <span>Part {text.part_number}: {text.part_title}</span>}
@@ -808,8 +1122,8 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
                       )}
                       
                       <p className="text-gray-700 text-sm line-clamp-3 mb-3">
-                        {text.content}
-                      </p>
+                      {text.content}
+                    </p>
                       
                       {text.cross_references && text.cross_references.length > 0 && (
                         <div className="mb-3">
@@ -828,47 +1142,47 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
                           </div>
                         </div>
                       )}
-                      
-                      {text.keywords && text.keywords.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {text.keywords.slice(0, 5).map((keyword, index) => (
-                            <span key={index} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                              {keyword}
-                            </span>
-                          ))}
-                          {text.keywords.length > 5 && (
-                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                              +{text.keywords.length - 5} autres
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
                     
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => setEditingText(text)}
-                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Modifier"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
+                    {text.keywords && text.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                        {text.keywords.slice(0, 5).map((keyword, index) => (
+                          <span key={index} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                            {keyword}
+                          </span>
+                        ))}
+                        {text.keywords.length > 5 && (
+                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                            +{text.keywords.length - 5} autres
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={() => setEditingText(text)}
+                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Modifier"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
                       {text.is_editable !== false && (
-                        <button
-                          onClick={() => handleDeleteText(text.id)}
-                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                    <button
+                      onClick={() => handleDeleteText(text.id)}
+                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                       )}
                     </div>
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       )}
 
       {/* Modals */}
@@ -888,6 +1202,13 @@ const UPCTextManager = ({ backendUrl, getAuthHeaders }) => {
           <ImportModal
             onImport={handleImportROP}
             onCancel={() => setShowImportModal(false)}
+          />
+        )}
+        
+        {showDeleteModal && (
+          <DeleteModal
+            onDelete={handleDeleteAllTextsByType}
+            onCancel={() => setShowDeleteModal(false)}
           />
         )}
       </AnimatePresence>

@@ -15,6 +15,13 @@ import json
 import re
 
 # Import authentication
+import sys
+import os
+# Add current directory to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 from auth import (
     UserCreate, UserLogin, UserResponse, Token, UserInDB,
     authenticate_user, create_access_token, create_user,
@@ -1078,6 +1085,39 @@ async def delete_upc_text(
         return {"message": "Text deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/admin/upc-texts/delete-by-type")
+async def delete_upc_texts_by_type(
+    delete_data: Dict[str, str],
+    current_user: UserInDB = Depends(get_admin_user)
+):
+    """Delete all texts of a specific document type"""
+    try:
+        document_type = delete_data.get("document_type")
+        if not document_type:
+            raise HTTPException(status_code=400, detail="document_type is required")
+        
+        # Count texts before deletion
+        count_before = upc_texts_collection.count_documents({"document_type": document_type})
+        
+        if count_before == 0:
+            return {"message": f"No texts found for type '{document_type}'", "deleted_count": 0}
+        
+        # Delete all texts of the specified type
+        result = upc_texts_collection.delete_many({"document_type": document_type})
+        
+        deleted_count = result.deleted_count
+        
+        return {
+            "message": f"Successfully deleted {deleted_count} texts of type '{document_type}'",
+            "deleted_count": deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting UPC texts by type: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # ROP Import endpoint
 @app.post("/api/admin/import-rop")

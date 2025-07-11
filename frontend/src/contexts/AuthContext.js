@@ -16,7 +16,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(localStorage.getItem('access_token'));
 
   // Configure axios defaults
   useEffect(() => {
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
       });
       
       const { access_token } = response.data;
-      localStorage.setItem('token', access_token);
+      localStorage.setItem('access_token', access_token);
       setToken(access_token);
       
       // Get user info
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     setToken(null);
     setUser(null);
     delete axios.defaults.headers.common['Authorization'];

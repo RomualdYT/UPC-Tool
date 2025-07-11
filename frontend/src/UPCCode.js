@@ -123,7 +123,13 @@ const UPCCode = ({ onBack }) => {
   }, {});
 
   const getDocumentTypeLabel = (docType) => {
-    return t(`upcCode.documentTypes.${docType}`, docType);
+    const translations = {
+      'rules_of_procedure': t('upcCode.documentTypes.rules_of_procedure'),
+      'upc_agreement': t('upcCode.documentTypes.upc_agreement'),
+      'statute': t('upcCode.documentTypes.statute'),
+      'fees': t('upcCode.documentTypes.fees')
+    };
+    return translations[docType] || docType;
   };
 
   const getDocumentTypeIcon = (docType) => {
@@ -212,7 +218,7 @@ const UPCCode = ({ onBack }) => {
                       <option value="">{t('upcCode.allDocuments')}</option>
                       {Object.keys(structure).map(docType => (
                         <option key={docType} value={docType}>
-                          {getDocumentTypeLabel(docType)} ({structure[docType].count})
+                          {getDocumentTypeLabel(docType)} ({structure[docType].total_count || 0})
                         </option>
                       ))}
                     </select>
