@@ -263,6 +263,19 @@ const AppContent = () => {
                     <span>{t('data', 'Données')}</span>
                   </div>
                 </button>
+                <button
+                  onClick={handleNavigateToUPCCode}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentView === 'upc-code' 
+                      ? 'bg-white/30 text-white' 
+                      : 'bg-white/20 text-white/80 hover:bg-white/30'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Scale className="h-4 w-4" />
+                    <span>Code UPC</span>
+                  </div>
+                </button>
               </div>
 
 
