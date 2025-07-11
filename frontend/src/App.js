@@ -34,6 +34,7 @@ import CaseDetail from './CaseDetail';
 import DataTable from './DataTable';
 import Dashboard from './Dashboard';
 import AdminPanel from './AdminPanel';
+import UPCCode from './UPCCode';
 import { exportData, exportStats } from './ExportUtils';
 import Notification from './Notification';
 
