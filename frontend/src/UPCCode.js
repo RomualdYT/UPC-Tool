@@ -173,6 +173,13 @@ const UPCCode = ({ onBack }) => {
               <div className="text-sm text-blue-100">
                 {Object.keys(structure).length} documents • {upcTexts.length} articles
               </div>
+              <button
+                onClick={() => setShowTextLoader(true)}
+                className="flex items-center space-x-2 px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-sm"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Charger textes officiels</span>
+              </button>
             </div>
           </div>
         </div>
