@@ -905,9 +905,9 @@ const PrivacyPage = () => {
 function App() {
   return (
     <AuthProvider>
-      <SEOProvider>
-        <DataProvider>
-          <Router>
+      <Router>
+        <SEOProvider>
+          <DataProvider>
             <Routes>
               <Route path="/" element={<AppWrapper />} />
               <Route path="/search" element={<AppWrapper />} />
@@ -919,9 +919,9 @@ function App() {
               <Route path="/admin/newsletter" element={<AppWrapper />} />
               <Route path="/admin/permissions" element={<AppWrapper />} />
             </Routes>
-          </Router>
-        </DataProvider>
-      </SEOProvider>
+          </DataProvider>
+        </SEOProvider>
+      </Router>
     </AuthProvider>
   );
 }
