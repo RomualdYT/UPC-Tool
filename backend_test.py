@@ -749,16 +749,18 @@ def run_tests():
     # Create a test suite
     suite = unittest.TestSuite()
     
-    # Add test methods - focusing on UPC scraper improvements
+    # Add test methods - focusing on UPC Code system
     test_cases = [
         'test_01_health_check',
         'test_02_get_cases',
         'test_04_get_cases_count',
         'test_05_get_filters',
-        'test_09_upc_sync_endpoint',
-        'test_10_enhanced_case_fields',
-        'test_11_scraper_data_quality',
-        'test_12_scraper_real_data_extraction'
+        'test_13_upc_texts_endpoint',
+        'test_14_upc_texts_structure_endpoint',
+        'test_15_add_apport_to_case',
+        'test_16_upc_texts_linked_cases_endpoint',
+        'test_17_upc_texts_filtering',
+        'test_18_upc_code_system_workflow'
     ]
     
     # Track results for each test
@@ -785,7 +787,7 @@ def run_tests():
         for failure in result.failures:
             print(f"   FAILURE: {failure[0]} - {failure[1]}")
     else:
-        print("\n✅ All tests passed! UPC scraper improvements are working correctly.")
+        print("\n✅ All tests passed! UPC Code system is working correctly.")
     
     return len(result.errors) == 0 and len(result.failures) == 0
 
