@@ -391,10 +391,15 @@ async def get_cases(
     date_to: Optional[str] = Query(None),
     case_type: Optional[CaseType] = Query(None),
     court_division: Optional[str] = Query(None),
-    language: Optional[Language] = Query(None)
+    language: Optional[Language] = Query(None),
+    include_excluded: bool = Query(False)
 ):
     """Get paginated cases with optional filtering"""
     query = {}
+    
+    # By default, exclude excluded cases for public access
+    if not include_excluded:
+        query["excluded"] = {"$ne": True}
     
     # Text search
     if search:
