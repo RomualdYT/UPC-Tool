@@ -673,7 +673,7 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
               </>
             )}
           </div>
-        </div>
+        )}
 
         {/* Edit Modal */}
         <AnimatePresence>
