@@ -78,6 +78,11 @@ module.exports = {
         'slide-down': 'slideDown 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'bounce-subtle': 'bounceSubtle 0.6s ease-in-out',
+        'skeleton-pulse': 'skeletonPulse 1.5s ease-in-out infinite',
+        'fade-in-up': 'fadeInUp 0.5s ease-out',
+        'scale-in-out': 'scaleInOut 0.2s ease-in-out',
+        'slide-left': 'slideLeft 0.3s ease-out',
+        'slide-right': 'slideRight 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
