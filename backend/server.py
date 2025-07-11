@@ -435,6 +435,113 @@ async def get_statistics():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# UPC Legal Texts Endpoints
+@app.get("/api/upc-texts")
+async def get_upc_texts(
+    document_type: Optional[str] = Query(None),
+    section: Optional[str] = Query(None),
+    language: str = Query("EN")
+):
+    """Get UPC legal texts with optional filtering"""
+    try:
+        query = {"language": language}
+        if document_type:
+            query["document_type"] = document_type
+        if section:
+            query["section"] = section
+        
+        texts = list(upc_texts_collection.find(query).sort("article_number", 1))
+        for text in texts:
+            text["id"] = str(text.pop("_id"))
+        
+        return texts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/upc-texts/{text_id}")
+async def get_upc_text(text_id: str):
+    """Get a specific UPC legal text"""
+    try:
+        text = upc_texts_collection.find_one({"_id": text_id})
+        if not text:
+            raise HTTPException(status_code=404, detail="Text not found")
+        
+        text["id"] = str(text.pop("_id"))
+        return text
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/upc-texts/{text_id}/linked-cases")
+async def get_linked_cases(text_id: str):
+    """Get cases linked to a specific UPC text through apports"""
+    try:
+        # Get the text first
+        text = upc_texts_collection.find_one({"_id": text_id})
+        if not text:
+            raise HTTPException(status_code=404, detail="Text not found")
+        
+        # Find cases that have apports referencing this article
+        article_number = text.get("article_number", "")
+        
+        # Search for cases with apports that reference this article
+        cases_with_apports = cases_collection.find({
+            "apports": {
+                "$elemMatch": {
+                    "article_number": {"$regex": article_number, "$options": "i"}
+                }
+            }
+        })
+        
+        linked_cases = []
+        for case in cases_with_apports:
+            # Find the relevant apports for this article
+            relevant_apports = [
+                apport for apport in case.get("apports", []) 
+                if article_number.lower() in apport.get("article_number", "").lower()
+            ]
+            
+            for apport in relevant_apports:
+                linked_cases.append({
+                    "case_id": str(case["_id"]),
+                    "case_title": case.get("reference", ""),
+                    "parties": case.get("parties", []),
+                    "date": case.get("date", ""),
+                    "citation": apport.get("citation", ""),
+                    "apport_id": apport.get("id", 0),
+                    "summary": case.get("summary", "")
+                })
+        
+        return linked_cases
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/upc-texts/structure")
+async def get_upc_structure(language: str = Query("EN")):
+    """Get the hierarchical structure of UPC texts"""
+    try:
+        # Get all document types and their sections
+        pipeline = [
+            {"$match": {"language": language}},
+            {"$group": {
+                "_id": "$document_type",
+                "sections": {"$addToSet": "$section"},
+                "count": {"$sum": 1}
+            }}
+        ]
+        
+        result = list(upc_texts_collection.aggregate(pipeline))
+        
+        structure = {}
+        for doc in result:
+            structure[doc["_id"]] = {
+                "sections": doc["sections"],
+                "count": doc["count"]
+            }
+        
+        return structure
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
