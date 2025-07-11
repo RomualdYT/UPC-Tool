@@ -5,19 +5,19 @@
 
 @layer base {
   * {
-    @apply border-gray-200 dark:border-gray-700;
+    @apply border-gray-200 dark:border-gray-600;
   }
   
   body {
-    @apply bg-slate-50 dark:bg-gray-900 text-slate-900 dark:text-gray-100 transition-colors;
+    @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors;
   }
   
-  /* Transitions pour le changement de thème */
+  /* Transitions simples pour le changement de thème */
   .theme-transitions,
   .theme-transitions * {
-    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter;
-    transition-duration: 200ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: background-color, border-color, color;
+    transition-duration: 150ms;
+    transition-timing-function: ease-in-out;
   }
   
   /* Désactiver les transitions pour les personnes sensibles au mouvement */
