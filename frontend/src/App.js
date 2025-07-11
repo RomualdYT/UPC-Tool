@@ -36,9 +36,12 @@ import Dashboard from './Dashboard';
 import AdminPanel from './AdminPanel';
 import { exportData, exportStats } from './ExportUtils';
 import Notification from './Notification';
+import ThemeToggle from './components/ThemeToggle';
+import { CaseCardSkeleton, TableSkeleton } from './components/SkeletonLoader';
 
-// Import du contexte de données
+// Import du contexte de données et du thème
 import { DataProvider, useData } from './contexts/DataContext';
+import { useTheme } from './contexts/ThemeContext';
 
 // Composant principal de l'application
 const AppContent = () => {
