@@ -749,10 +749,12 @@ class UPCLegalAPITester(unittest.TestCase):
         """Test user registration endpoint"""
         print("\n🔍 Testing user registration...")
         try:
-            # Create a new user with realistic data
+            # Create a new user with realistic data and unique email
+            import time
+            timestamp = str(int(time.time()))
             user_data = {
-                "email": "sarah.johnson@lawfirm.com",
-                "username": "sarah_johnson",
+                "email": f"sarah.johnson.{timestamp}@lawfirm.com",
+                "username": f"sarah_johnson_{timestamp}",
                 "password": "SecurePass123!",
                 "profile": "professional",
                 "newsletter_opt_in": True
@@ -760,6 +762,14 @@ class UPCLegalAPITester(unittest.TestCase):
             
             response = self.session.post(f"{self.api_url}/auth/register", 
                                        json=user_data, timeout=self.timeout)
+            
+            if response.status_code == 400:
+                # User might already exist, try with different email
+                user_data["email"] = f"new.user.{timestamp}@example.com"
+                user_data["username"] = f"new_user_{timestamp}"
+                response = self.session.post(f"{self.api_url}/auth/register", 
+                                           json=user_data, timeout=self.timeout)
+            
             self.assertEqual(response.status_code, 200)
             
             user_response = response.json()
