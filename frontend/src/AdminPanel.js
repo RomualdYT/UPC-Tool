@@ -30,11 +30,22 @@ const AdminPanel = ({ onClose, onCaseUpdate }) => {
     setNotification
   } = useData();
 
-
+  const [activeView, setActiveView] = useState('cases'); // 'cases' or 'advanced'
   const [editingCase, setEditingCase] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, commented, important, none
   const [localLoading, setLocalLoading] = useState(false);
+
+  // Helper function to get auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('access_token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
   // Filtrer les cas selon les critères
   const filteredCases = allCases.filter(case_item => {
