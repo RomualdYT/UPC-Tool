@@ -313,10 +313,18 @@ class CaseModel(BaseModel):
     documents: List[DocumentModel] = []
     admin_summary: Optional[str] = None
     apports: Optional[List[ApportModel]] = []
+    excluded: bool = False
+    exclusion_reason: Optional[str] = None
 
 class CaseUpdateModel(BaseModel):
     admin_summary: Optional[str] = None
     apports: Optional[List[ApportModel]] = None
+    excluded: Optional[bool] = None
+    exclusion_reason: Optional[str] = None
+
+class CaseExclusionModel(BaseModel):
+    excluded: bool
+    exclusion_reason: Optional[str] = None
 
 # API endpoints
 @app.get("/")
