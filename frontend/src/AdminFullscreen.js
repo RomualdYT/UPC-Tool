@@ -17,7 +17,9 @@ import {
   Shield,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Mail,
+  Key
 } from 'lucide-react';
 import { useData } from './contexts/DataContext';
 import { useTranslation } from 'react-i18next';
