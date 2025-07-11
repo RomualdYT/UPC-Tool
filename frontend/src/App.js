@@ -297,13 +297,42 @@ const AppContent = () => {
                 <Database className={`h-5 w-5 text-white ${syncing ? 'animate-spin' : ''}`} />
               </button>
 
-              <button
-                onClick={() => setShowAdmin(true)}
-                className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
-                title="Administration"
-              >
-                <Shield className="h-5 w-5 text-white" />
-              </button>
+              {/* Admin Button - only show if user is admin */}
+              {isAdmin() && (
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  className="p-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors"
+                  title="Administration"
+                >
+                  <Shield className="h-5 w-5 text-white" />
+                </button>
+              )}
+
+              {/* Authentication */}
+              {isAuthenticated() ? (
+                <UserMenu />
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      setAuthMode('login');
+                      setShowAuthModal(true);
+                    }}
+                    className="px-3 py-2 bg-white/20 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors text-white text-sm font-medium"
+                  >
+                    Connexion
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="px-3 py-2 bg-white/30 rounded-lg backdrop-blur-sm hover:bg-white/40 transition-colors text-white text-sm font-medium"
+                  >
+                    S'inscrire
+                  </button>
+                </div>
+              )}
               
               <div className="relative">
                 <select
