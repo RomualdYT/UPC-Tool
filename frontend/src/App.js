@@ -603,13 +603,7 @@ const AppContent = () => {
                 </div>
               ) : viewMode === 'table' ? (
                 allCases.length === 0 ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="loading-dots">
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                    </div>
-                  </div>
+                  <TableSkeleton rows={8} columns={6} />
                 ) : (
                   <DataTable 
                     data={filteredCases} 
@@ -619,14 +613,17 @@ const AppContent = () => {
                 )
               ) : (
                 <div className="space-y-4">
-                  {paginatedCases.map((case_item, index) => (
-                    <motion.div
-                      key={case_item.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="romulus-card"
-                    >
+                  {loading ? (
+                    <CaseCardSkeleton count={5} />
+                  ) : (
+                    paginatedCases.map((case_item, index) => (
+                      <motion.div
+                        key={case_item.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="romulus-card hover-lift"
+                      >
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                         <div className="lg:col-span-3">
                           <div className="flex items-start justify-between mb-3">
